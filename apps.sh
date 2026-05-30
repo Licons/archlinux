@@ -2,70 +2,84 @@
 
 set -e
 
-cd /tmp
+read -p "Your Nvidia GPU is 10xx (y or n): " GPU
+
+echo
+echo
+echo "##################################################"
+echo "###                SETUP YAY                   ###"
+echo "##################################################"
+echo
+echo
+
 git clone https://aur.archlinux.org/yay
 cd yay
 makepkg -si --noconfirm
-cd /tmp/arch-kde
 
-# Cập nhật hệ thống
+echo
+echo
+echo "##################################################"
+echo "###              UPDATE BY YAY                 ###"
+echo "##################################################"
+echo
+echo
+
+cd ..
 yay -Syu --noconfirm
 
-# Cài các phần mềm khác
-echo "==> Cài đặt phần mềm"
+echo
+echo
+echo "##################################################"
+echo "###              INSTALL APPS                  ###"
+echo "##################################################"
+echo
+echo
+
+case $GPU in
+    y)
+        yay -S --noconfirm \
+            nvidia-580xx-dkms nvidia-580xx-settings \
+            nvidia-580xx-utils lib32-nvidia-580xx-utils \
+            vulkan-icd-loader lib32-vulkan-icd-loader
+        ;;
+    *)
+        echo "No option!"
+        ;;
+esac
+
 yay -S --noconfirm \
   tela-circle-icon-theme \
-  zen-browser-bin \
-  nodejs npm jdk-openjdk \
-  onedrive onedrivegui \
-  vlc \
+  kf6-servicemenus-rootactions \
+  firefox vlc \
   libreoffice-fresh \
-  teams-for-linux \
-  rider \
-  dbeaver \
-  postman-bin \
+  nodejs npm jdk-openjdk \
+  ttf-ms-fonts \
+  onedrive onedrivegui teams-for-linux \
+  rider dbeaver postman-bin \
   appimagelauncher \
-  rclone
+  rclone \
+  postgresql
 
-echo "==> Cấu hình fcitx5 trong ~/.xprofile"
+echo
+echo
+echo "##################################################"
+echo "###          INSTALL DOTNET 8+9                ###"
+echo "##################################################"
+echo
+echo
 
-if ! grep -q "GTK_IM_MODULE=fcitx" ~/.xprofile 2>/dev/null; then
-cat << 'EOF' >> ~/.xprofile
+net8="8.0.421"
+net9="9.0.314"
+net10="10.0.300"
 
-# Fcitx5 input method
-export GTK_IM_MODULE=fcitx
-export QT_IM_MODULE=fcitx
-export XMODIFIERS="@im=fcitx"
-export INPUT_METHOD=fcitx
-EOF
-fi
+wget -P ~/Downloads https://builds.dotnet.microsoft.com/dotnet/Sdk/$net8/dotnet-sdk-$net8-linux-x64.tar.gz
+wget -P ~/Downloads https://builds.dotnet.microsoft.com/dotnet/Sdk/$net9/dotnet-sdk-$net9-linux-x64.tar.gz
+wget -P ~/Downloads https://builds.dotnet.microsoft.com/dotnet/Sdk/$net10/dotnet-sdk-$net10-linux-x64.tar.gz
 
-echo "Copy cấu hình Fish"
-read -p "Enter your username: " username
-cat <<EOF > ./fish/config.fish
-if status is-interactive
-    fastfetch
-end
-
-set -g fish_greeting
-set -x DOTNET_CLI_TELEMETRY_OPTOUT 1
-set -gx PATH \$PATH /home/$username/.dotnet/tools
-EOF
-sudo cp -fr ./fish ~/.config/
-
-echo "Copy Kvantum"
-sudo tar -xJf ./Kvantum/Layan.tar.xz -C /usr/share/Kvantum/
-sudo tar -xJf ./Kvantum/Layan-solid.tar.xz -C /usr/share/Kvantum/
-sudo tar -xJf ./Kvantum/Sweet.tar.xz -C /usr/share/Kvantum/
-sudo tar -xJf ./Kvantum/Sweet-Ambar-Blue.tar.xz -C /usr/share/Kvantum/
-sudo tar -xJf ./Kvantum/Sweet-Mars.tar.xz -C /usr/share/Kvantum/
-sudo tar -xJf ./Kvantum/Sweet-Mars-transparent-toolbar.tar.xz -C /usr/share/Kvantum/
-sudo tar -xJf ./Kvantum/Sweet-transparent-toolbar.tar.xz -C /usr/share/Kvantum/
-
-echo "==> Cài đặt DOTNET"
-wget -P ~/Downloads https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.414/dotnet-sdk-8.0.414-linux-x64.tar.gz
 sudo mkdir -p /usr/share/dotnet
-sudo tar -xzf ~/Downloads/dotnet-sdk-8.0.414-linux-x64.tar.gz -C /usr/share/dotnet/
+sudo tar -xzf ~/Downloads/dotnet-sdk-$net8-linux-x64.tar.gz -C /usr/share/dotnet/
+sudo tar -xzf ~/Downloads/dotnet-sdk-$net9-linux-x64.tar.gz -C /usr/share/dotnet/
+sudo tar -xzf ~/Downloads/dotnet-sdk-$net10-linux-x64.tar.gz -C /usr/share/dotnet/
 sudo ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
 
 dotnet --info
@@ -73,6 +87,30 @@ dotnet tool update -g linux-dev-certs
 dotnet linux-dev-certs install
 dotnet dev-certs https --trust
 
-git config --global credential.helper store
+dotnet tool install -g dotnet-ef
+dotnet tool install -g dotnet-sonarscanner
 
-echo "Hoàn tất cài đặt Ứng dụng!"
+echo
+echo
+echo "##################################################"
+echo "###          INSTALL NPM PACKAGE               ###"
+echo "##################################################"
+echo
+echo
+
+sudo npm i -g bash-language-server
+sudo npm i -g @openapitools/openapi-generator-cli
+sudo openapi-generator-cli version-manager set 7.22.0
+
+echo
+echo
+echo "##################################################"
+echo "###        DOWNLOAD ANOTHER REDIS              ###"
+echo "##################################################"
+echo
+echo
+
+wget -P ~/Downloads https://github.com/qishibo/AnotherRedisDesktopManager/releases/download/v1.7.1/Another-Redis-Desktop-Manager-linux-1.7.1-x86_64.AppImage
+
+echo
+echo "### INSTALLED APPS ###"
