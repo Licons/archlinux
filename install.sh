@@ -5,6 +5,7 @@ read -p "Enter your hostname: " hostname
 read -p "Enter your username: " username
 read -p "Enter your GPU (n/nvidia or i/intel or amd): " GPU
 read -p "Set timeout for GRUB: " timeoutgrub
+read -p "Your DE (KDE or Cinnamon): " DE
 
 echo
 echo
@@ -185,17 +186,39 @@ esac
 echo
 echo
 echo "##################################################"
-echo "###          INSTALL KDE & APPS                ###"
+echo "###          INSTALL $DE & APPS                ###"
 echo "##################################################"
 echo
 echo
 
+case $GPU in
+    KDE)
+        pacman -S --noconfirm \
+            plasma-meta \
+            plasma-x11-session \
+            sddm sddm-kcm \
+            konsole dolphin dolphin-plugins spectacle ark gwenview kalk kate okular \
+            flatpak kvantum-qt5
+
+        systemctl enable sddm
+        ;;
+    Cinnamon)
+        pacman -S --noconfirm \
+            cinnamon cinnamon-translations \
+            lightdm lightdm-gtk-greeter lightdm-slick-greeter \
+            gnome-terminal gnome-screenshot gnome-system-monitor gnome-calculator \
+            nemo-fileroller nemo-terminal \
+            gufw \
+            xdg-user-dirs xdg-user-dirs-gtk xdg-user-dirs-update
+        systemctl enable lightdm
+        ;;
+    *)
+        echo "Nothing in setup DE."
+        ;;
+esac
+
 pacman -S --noconfirm \
-    plasma-meta \
-    plasma-x11-session \
-    sddm sddm-kcm \
-    konsole dolphin dolphin-plugins spectacle ark gwenview kalk kate jq okular \
-    flatpak pacman-contrib kvantum-qt5 system-config-printer \
+    pacman-contrib system-config-printer jq \
     pipewire pipewire-audio pipewire-alsa pipewire-jack wireplumber \
     bluez bluez-utils bluedevil \
     powerdevil power-profiles-daemon \
@@ -206,7 +229,6 @@ pacman -S --noconfirm \
     noto-fonts noto-fonts-cjk noto-fonts-emoji \
     docker docker-compose
 
-systemctl enable sddm
 systemctl enable NetworkManager
 systemctl enable bluetooth
 systemctl enable ufw
