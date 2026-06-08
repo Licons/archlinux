@@ -11,10 +11,10 @@ echo
 echo
 
 echo "=== Xóa waydroid cũ ==="
-sudo systemctl stop waydroid-container
-sudo pacman -Rns waydroid
+# sudo systemctl stop waydroid-container
+# sudo pacman -Rns waydroid --noconfirm
 sudo rm -rf /var/lib/waydroid
-rm -rf ~/.local/share/waydroid
+sudo rm -rf ~/.local/share/waydroid
 
 echo "=== Cập nhật hệ thống ==="
 yay -Syu --noconfirm
@@ -25,7 +25,7 @@ yay -S --noconfirm --needed \
     waydroid-script-git
 
 echo "=== Init waydroid ==="
-sudo waydroid init -s GAPPSc
+sudo waydroid init -s GAPPS
 sudo waydroid-extras install libhoudini
 sudo waydroid-extras install libndk
 sudo systemctl enable --now waydroid-container
@@ -39,10 +39,10 @@ sudo sed -i \
     -e "s|^DEFAULT_FORWARD_POLICY=.*|DEFAULT_FORWARD_POLICY="ACCEPT"|" \
     /etc/default/ufw
 echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-waydroid.conf
-sudo sysctl --system
+# sudo sysctl --system
 
-waydroid prop set persist.waydroid.multi_windows true
 waydroid session start
+waydroid prop set persist.waydroid.multi_windows true
 waydroid show-full-ui
 
 
