@@ -2,64 +2,6 @@
 
 set -e
 
-read -p "Your Nvidia GPU is 10xx (y or n): " GPU
-
-echo
-echo
-echo "##################################################"
-echo "###                SETUP YAY                   ###"
-echo "##################################################"
-echo
-echo
-
-git clone https://aur.archlinux.org/yay
-cd yay
-makepkg -si --noconfirm
-
-echo
-echo
-echo "##################################################"
-echo "###              UPDATE BY YAY                 ###"
-echo "##################################################"
-echo
-echo
-
-cd ..
-yay -Syu --noconfirm
-
-echo
-echo
-echo "##################################################"
-echo "###              INSTALL APPS                  ###"
-echo "##################################################"
-echo
-echo
-
-case $GPU in
-    y)
-        yay -S --noconfirm \
-            nvidia-580xx-dkms nvidia-580xx-settings \
-            nvidia-580xx-utils lib32-nvidia-580xx-utils \
-            vulkan-icd-loader lib32-vulkan-icd-loader
-        ;;
-    *)
-        echo "No option!"
-        ;;
-esac
-
-yay -S --noconfirm \
-  tela-circle-icon-theme \
-  kf6-servicemenus-rootactions \
-  firefox vlc \
-  libreoffice-fresh \
-  nodejs npm jdk-openjdk \
-  ttf-ms-fonts \
-  onedrive onedrivegui teams-for-linux \
-  rider dbeaver postman-bin \
-  appimagelauncher \
-  rclone \
-  postgresql
-
 echo
 echo
 echo "##################################################"
