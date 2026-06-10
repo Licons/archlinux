@@ -191,7 +191,7 @@ echo "##################################################"
 echo
 echo
 
-case $GPU in
+case $DE in
     KDE)
         pacman -S --noconfirm \
             plasma-meta \
