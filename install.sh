@@ -146,7 +146,7 @@ sed -i \
     -e "s|^#GRUB_DISABLE_OS_PROBER=.*|GRUB_DISABLE_OS_PROBER=false|" \
     /etc/default/grub
 
-cp -fv /tmp/arch-kde/pictures/background.jpg /usr/share/grub/themes/tela/background.jpg
+cp -fv /tmp/archlinux/pictures/background.jpg /usr/share/grub/themes/tela/background.jpg
 chmod -x /etc/grub.d/30_uefi-firmware
 grub-mkconfig -o /boot/grub/grub.cfg
 
