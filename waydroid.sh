@@ -45,16 +45,18 @@ echo "=== Setting ==="
 echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-waydroid.conf
 # sudo sysctl --system
 
-waydroid session start
+waydroid session start &
 
 waydroid prop set persist.waydroid.multi_windows true
-waydroid prop set persist.waydroid.width 576
-waydroid prop set persist.waydroid.height 1024
+waydroid prop set persist.waydroid.width 1024
+waydroid prop set persist.waydroid.height 576
 waydroid prop set persist.waydroid.udev true
 waydroid prop set persist.waydroid.uevent true
 
 waydroid session stop
-waydroid session start
+waydroid session start &
+
+sudo systemctl restart waydroid-container
 
 echo
 echo "### INSTALLED APPS ###"
