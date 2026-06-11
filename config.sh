@@ -2,11 +2,11 @@
 
 set -e
 
-read -p "Enter your username: " username
-read -p "Enter your GIT username: " gituser
-read -p "Enter your GIT email: " gitemail
+read -p "Enter your username: " USER_NAME
+read -p "Enter your GIT username: " GIT_USER
+read -p "Enter your GIT email: " GIT_EMAIL
 
-chsh -s /usr/bin/fish $username
+chsh -s /usr/bin/fish $USER_NAME
 
 echo
 echo
@@ -22,7 +22,8 @@ if status is-interactive
 end
 
 set -g fish_greeting
-set -gx PATH \$PATH /home/$username/.dotnet/tools
+set -gx PATH \$PATH /home/$USER_NAME/.dotnet/tools
+set -gx PATH $HOME/.local/bin $PATH
 
 set -x DOTNET_CLI_TELEMETRY_OPTOUT 1
 set -x LC_ALL C.UTF-8
@@ -64,8 +65,8 @@ echo "##################################################"
 echo
 echo
 
-git config --global user.name "$gituser"
-git config --global user.email "$gitemail"
+git config --global user.name "$GIT_USER"
+git config --global user.email "$GIT_EMAIL"
 git config --global credential.helper store
 cat <<EOF > ~/.git-credentials
 https://TripOTAEcoSys@dev.azure.com

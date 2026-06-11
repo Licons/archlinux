@@ -1,10 +1,14 @@
 #!/bin/bash
 set -e
 
-read -p "Enter your hostname: " hostname
-read -p "Enter your username: " username
+FOLDER_NAME="archlinux"
+$ROOT_PASS="676021"
+
+read -p "Enter your hostname: " HOST_NAME
+read -p "Enter your username: " USER_NAME
+read -p "Enter your password: " USER_PASS
 read -p "Enter your GPU (n/nvidia or i/intel or amd): " GPU
-read -p "Set timeout for GRUB: " timeoutgrub
+read -p "Set timeout for GRUB: " TIMEOUT_GRUB
 read -p "Your DE (KDE or Cinnamon): " DE
 
 echo
@@ -41,9 +45,9 @@ echo "##################################################"
 echo
 echo
 
-echo "$hostname" > /etc/hostname
-if ! grep -q "127.0.0.1 $hostname" /etc/hosts; then
-    echo "127.0.0.1 $hostname" >> /etc/hosts
+echo "$HOST_NAME" > /etc/hostname
+if ! grep -q "127.0.0.1 $HOST_NAME" /etc/hosts; then
+    echo "127.0.0.1 $HOST_NAME" >> /etc/hosts
 fi
 
 echo
@@ -54,7 +58,7 @@ echo "##################################################"
 echo
 echo
 
-passwd
+echo "root:$ROOT_PASS" | chpasswd
 
 echo
 echo
@@ -64,9 +68,10 @@ echo "##################################################"
 echo
 echo
 
-useradd -mG wheel "$username"
-echo "==> Create and setup password for user: $username"
-passwd "$username"
+useradd -mG wheel "$USER_NAME"
+echo "==> Create and setup password for user: $USER_NAME"
+passwd "$USER_NAME"
+echo "$USER_NAME:$USER_PASS" | sudo chpasswd
 
 echo
 echo
@@ -139,14 +144,14 @@ echo "==> Update GRUB"
 cd /
 sed -i \
     -e "s|^GRUB_DEFAULT=.*|GRUB_DEFAULT=saved|" \
-    -e "s|^GRUB_TIMEOUT=.*|GRUB_TIMEOUT=$timeoutgrub|" \
+    -e "s|^GRUB_TIMEOUT=.*|GRUB_TIMEOUT=$TIMEOUT_GRUB|" \
     -e "s|^#GRUB_DISABLE_RECOVERY=.*|GRUB_DISABLE_RECOVERY=true|" \
     -e "s|^#GRUB_SAVEDEFAULT=.*|GRUB_SAVEDEFAULT=true|" \
     -e "s|^#GRUB_DISABLE_SUBMENU=.*|GRUB_DISABLE_SUBMENU=y|" \
     -e "s|^#GRUB_DISABLE_OS_PROBER=.*|GRUB_DISABLE_OS_PROBER=false|" \
     /etc/default/grub
 
-cp -fv /tmp/archlinux/pictures/background.jpg /usr/share/grub/themes/tela/background.jpg
+cp -fv /tmp/$FOLDER_NAME/pictures/background.jpg /usr/share/grub/themes/tela/background.jpg
 chmod -x /etc/grub.d/30_uefi-firmware
 grub-mkconfig -o /boot/grub/grub.cfg
 
@@ -236,7 +241,7 @@ systemctl enable systemd-timesyncd
 systemctl enable docker
 systemctl enable fstrim.timer
 
-usermod -aG docker $username
+usermod -aG docker $USER_NAME
 
 echo
 echo "### Install KDE and Apps completed!"
