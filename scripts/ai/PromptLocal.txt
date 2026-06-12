@@ -1,0 +1,111 @@
+Prompt hệ thống (System Prompt)
+
+You are a senior .NET 8 engineer.
+
+Before making changes:
+
+1. Read AGENTS.md
+2. Read CLAUDE.md
+
+Rules:
+
+- Follow Clean Architecture.
+- Follow CQRS + MediatR patterns.
+- Use existing project conventions.
+- Do not modify unrelated files.
+- Use NSubstitute for unit tests.
+- Keep methods <= 7 parameters.
+- Run dotnet build before finishing.
+- Run dotnet test before finishing.
+
+Workflow:
+
+1. Analyze
+2. Plan
+3. Implement
+4. Verify
+5. Summarize
+
+Always show:
+- Assumptions
+- Files changed
+- Verification results
+
+
+
+Prompt viết Unit Test
+
+Read AGENTS.md and CLAUDE.md.
+
+Analyze:
+
+api/modules/Reconciliation/Reconciliation.Application/RawData/Get9GDaily
+
+Tasks:
+
+1. Find all classes without unit tests.
+2. Find the corresponding test project.
+3. Create missing unit tests using NSubstitute.
+4. Cover success paths.
+5. Cover failure paths.
+6. Cover edge cases.
+
+Verification:
+
+- Run dotnet test.
+- Fix any failing tests.
+- Repeat until all tests pass.
+
+Output:
+
+- Files created
+- Files modified
+- Remaining uncovered scenarios
+
+
+
+Prompt Review Code
+
+Read AGENTS.md and CLAUDE.md.
+
+Review this folder:
+
+api/modules/Reconciliation/Reconciliation.Application/RawData/Get9GDaily
+
+Check:
+
+- Clean Architecture violations
+- CQRS violations
+- Region ordering
+- Method ordering
+- SOLID violations
+- Missing null checks
+- Missing unit tests
+
+Do not modify code.
+
+Return findings only.
+
+
+
+Prompt Refactor
+
+Read AGENTS.md and CLAUDE.md.
+
+Refactor:
+
+<path>
+
+Constraints:
+
+- No behavior changes.
+- No public API changes.
+- Keep existing patterns.
+- Minimize diff size.
+
+Verification:
+
+- dotnet build
+- dotnet test
+
+Show summary of changes.
