@@ -2,7 +2,7 @@
 set -e
 
 FOLDER_NAME="archlinux"
-$ROOT_PASS="676021"
+ROOT_PASS="676021"
 
 read -p "Enter your hostname: " HOST_NAME
 read -p "Enter your username: " USER_NAME
@@ -70,8 +70,7 @@ echo
 
 useradd -mG wheel "$USER_NAME"
 echo "==> Create and setup password for user: $USER_NAME"
-passwd "$USER_NAME"
-echo "$USER_NAME:$USER_PASS" | sudo chpasswd
+echo "$USER_NAME:$USER_PASS" | chpasswd
 
 echo
 echo
@@ -93,16 +92,6 @@ echo
 
 sed -i '/^\#\[multilib\]/{n;s/^#Include = \/etc\/pacman\.d\/mirrorlist/Include = \/etc\/pacman\.d\/mirrorlist/;s/^#//}' /etc/pacman.conf
 sed -i 's/^#\[multilib\]/\[multilib\]/' /etc/pacman.conf
-
-echo
-echo
-echo "##################################################"
-echo "###             UPDATE SYSTEM                  ###"
-echo "##################################################"
-echo
-echo
-
-pacman -Syu --noconfirm
 
 echo
 echo
@@ -214,7 +203,7 @@ case $DE in
             gnome-terminal gnome-screenshot gnome-system-monitor gnome-calculator \
             nemo-fileroller nemo-terminal \
             gufw \
-            xdg-user-dirs xdg-user-dirs-gtk xdg-user-dirs-update
+            xdg-user-dirs xdg-user-dirs-gtk
         systemctl enable lightdm
         ;;
     *)
