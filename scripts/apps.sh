@@ -80,9 +80,9 @@ echo
 
 sudo npm i -g bash-language-server
 
-sudo npm config set allow-scripts=@openapitools/openapi-generator-cli --location=user
-sudo npm i -g @openapitools/openapi-generator-cli
-sudo openapi-generator-cli version-manager set latest
+#sudo npm config set allow-scripts=@openapitools/openapi-generator-cli --location=user
+#sudo npm i -g @openapitools/openapi-generator-cli
+#sudo openapi-generator-cli version-manager set latest
 
 echo
 echo
@@ -119,15 +119,15 @@ echo "##################################################"
 echo
 echo
 
-curl -fsSL https://claude.ai/install.sh | bash
-claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
+#curl -fsSL https://claude.ai/install.sh | bash
+#claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
 
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv tool install graphifyy
 graphify install
 
-sudo npm config set allow-scripts=opencode-ai --location=user
-sudo npm install -g opencode-ai
+#sudo npm config set allow-scripts=opencode-ai --location=user
+#sudo npm install -g opencode-ai
 
 sudo npm config set allow-scripts=yarn --location=user
 sudo npm install -g yarn@1.22.22
