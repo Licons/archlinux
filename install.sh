@@ -9,7 +9,7 @@ read -p "Enter your hostname: " HOST_NAME
 read -p "Enter your username: " USER_NAME
 read -p "Enter your GPU (n/nvidia or i/intel or amd or o/others): " GPU
 read -p "Set timeout for GRUB: " TIMEOUT_GRUB
-read -p "Your DE (KDE or Cinnamon): " DE
+read -p "Your DE (KDE or Cinnamon or Hyprland): " DE
 
 echo
 echo
@@ -208,6 +208,11 @@ case $DE in
             gufw \
             xdg-user-dirs xdg-user-dirs-gtk
         systemctl enable lightdm
+        ;;
+    Hyprland)
+        git clone https://github.com/JaKooLit/Arch-Hyprland.git /tmp/Arch-Hyprland
+        cd /tmp/Arch-Hyprland
+        bash ./install.sh
         ;;
     *)
         echo "Nothing in setup DE."
