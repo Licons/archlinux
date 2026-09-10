@@ -1,0 +1,2 @@
+If installing Dbeaver by pacman (use KDE Wayland)
+- Add env GTK_THEME=Breeze-Dark in .desktop
