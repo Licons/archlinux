@@ -8,7 +8,7 @@ read -p "Enter your hostname: " HOST_NAME
 read -p "Enter your username: " USER_NAME
 read -p "Enter your GPU (n/nvidia or i/intel or a/amd or o/others): " GPU
 read -p "Set timeout for GRUB: " TIMEOUT_GRUB
-read -p "Your DE (kde or cinnamon or hyprland): " DE
+read -p "Your DE (kde or cinnamon or other): " DE
 
 echo
 echo
@@ -249,23 +249,6 @@ EOF
 
         systemctl enable lightdm
         ;;
-    hyprland)
-        pacman -S --needed --noconfirm \
-            hyprland waybar kitty swaybg swaync rofi \
-            hyprpicker grim slurp cliphist thunar qt5-wayland qt6-wayland polkit-gnome \
-            udisks2 udiskie gnome-disk-utility \
-            sddm qt5-graphicaleffects qt5-quickcontrols2 qt5-svg libnotify \
-            nwg-look \
-            ttf-jetbrains-mono-nerd noto-fonts-cjk ttf-font-awesome papirus-icon-theme \
-            fastfetch chafa hyprlock brightnessctl wireplumber networkmanager \
-            pavucontrol blueman btop python-requests mpd mpc ncmpcpp cava 7zip
-
-        systemctl enable sddm
-        systemctl enable mpd
-
-        mkdir -p /usr/share/sddm
-        7z x sddm.7z -o/usr/share/sddm/ -aoa -bb1
-        ;;
     *)
         echo "Nothing in setup DE."
         ;;
@@ -282,42 +265,46 @@ echo "##################################################"
 echo
 echo
 
+systemctl enable NetworkManager
+systemctl enable systemd-timesyncd
+systemctl enable fstrim.timer
+
 echo "# FONTS #"
 pacman -S --noconfirm --needed \
     ttf-roboto ttf-dejavu ttf-liberation \
     ttf-carlito ttf-material-icons ttf-material-symbols-variable ttf-cascadia-code \
     ttf-jetbrains-mono ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols \
     noto-fonts noto-fonts-cjk noto-fonts-emoji \
-    otf-font-awesome ttf-font-awesome
+    otf-font-awesome woff2-font-awesome
 
 echo
-echo "# APPS #"
+echo "# SYSTEM APPS #"
 pacman -S --noconfirm --needed \
-    flatpak network-manager-applet \
-    vulkan-icd-loader lib32-vulkan-icd-loader \
-    pacman-contrib system-config-printer jq \
-    pipewire pipewire-audio pipewire-pulse pipewire-alsa wireplumber \
-    bluez bluez-utils bluedevil \
-    powerdevil power-profiles-daemon \
-    ufw ufw-extras \
-    fastfetch fish wget curl 7zip \
-    fcitx5-im fcitx5-configtool fcitx5-unikey \
-    docker docker-compose docker-buildx \
-    git-lfs less rclone \
-    firefox vlc \
-    libreoffice-fresh \
-    nodejs npm jdk-openjdk \
-    dbeaver postgresql code \
-    tela-circle-icon-theme-purple
-
-systemctl enable NetworkManager
-systemctl enable systemd-timesyncd
-systemctl enable fstrim.timer
+	flatpak network-manager-applet \
+	vulkan-icd-loader lib32-vulkan-icd-loader \
+	pacman-contrib system-config-printer jq \
+	pipewire pipewire-audio pipewire-pulse pipewire-alsa wireplumber \
+	bluez bluez-utils bluedevil \
+	powerdevil power-profiles-daemon \
+	ufw ufw-extras \
+	fastfetch fish wget curl 7zip \
+	fcitx5-im fcitx5-configtool fcitx5-unikey
 
 systemctl enable bluetooth
 systemctl enable ufw
-systemctl enable docker
+	
+echo
+echo "# APPS #"
+pacman -S --noconfirm --needed \
+	docker docker-compose docker-buildx \
+	git-lfs less rclone \
+	firefox vlc \
+	libreoffice-fresh \
+	nodejs npm jdk-openjdk \
+	dbeaver postgresql code \
+	tela-circle-icon-theme-purple
 
+systemctl enable docker
 usermod -aG docker $USER_NAME
 
 echo

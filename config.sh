@@ -120,5 +120,3 @@ sudo ufw enable
 
 echo
 echo "### DONE ###"
-
-reboot
