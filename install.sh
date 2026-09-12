@@ -235,7 +235,6 @@ EOF
         pacman -S --noconfirm --needed \
             xorg-server \
             cinnamon sddm \
-            xed xviewer \
             gnome-terminal gnome-screenshot gnome-system-monitor gnome-calculator gnome-calendar \
             nemo-fileroller nemo-terminal nemo-share \
             ufw ufw-extras gufw \
