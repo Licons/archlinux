@@ -7,8 +7,8 @@ ROOT_PASS="676021"
 read -p "Enter your hostname: " HOST_NAME
 read -p "Enter your username: " USER_NAME
 read -p "Enter your GPU (n/nvidia or i/intel or a/amd or o/others): " GPU
-read -p "Set timeout for GRUB: " TIMEOUT_GRUB
 read -p "Your DE (k/kde or c/cinnamon or o/other): " DE
+read -p "Set timeout for GRUB: " TIMEOUT_GRUB
 
 echo
 echo
@@ -187,7 +187,7 @@ echo
 echo
 
 case $DE in
-    kde)
+    k|kde)
         pacman -S --noconfirm --needed \
             plasma-desktop \
             sddm sddm-kcm \
@@ -231,7 +231,7 @@ ProtectSystem=false
 EOF
 
         ;;
-    cinnamon)
+    c|cinnamon)
         pacman -S --noconfirm --needed \
             xorg-server \
             cinnamon sddm \
