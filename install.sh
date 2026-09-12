@@ -8,7 +8,7 @@ read -p "Enter your hostname: " HOST_NAME
 read -p "Enter your username: " USER_NAME
 read -p "Enter your GPU (n/nvidia or i/intel or a/amd or o/others): " GPU
 read -p "Set timeout for GRUB: " TIMEOUT_GRUB
-read -p "Your DE (kde or cinnamon or o/other): " DE
+read -p "Your DE (k/kde or c/cinnamon or o/other): " DE
 
 echo
 echo
@@ -235,7 +235,7 @@ EOF
         pacman -S --noconfirm --needed \
             xorg-server \
             cinnamon sddm \
-            xed xviewer pix \
+            xed xviewer \
             gnome-terminal gnome-screenshot gnome-system-monitor gnome-calculator gnome-calendar \
             nemo-fileroller nemo-terminal nemo-share \
             ufw ufw-extras gufw \
