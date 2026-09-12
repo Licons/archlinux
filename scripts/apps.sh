@@ -4,42 +4,6 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-read -p "Your Nvidia GPU is 10xx (y or n): " GPU
-
-case $GPU in
-    y)
-
-        echo
-        echo
-        echo "##################################################"
-        echo "###                SETUP YAY                   ###"
-        echo "##################################################"
-        echo
-        echo
-
-        git clone https://aur.archlinux.org/yay /tmp/yay
-        cd /tmp/yay
-        makepkg -si --noconfirm
-        cd $SCRIPT_DIR
-
-        echo
-        echo
-        echo "##################################################"
-        echo "###              INSTALL NVIDIA                ###"
-        echo "##################################################"
-        echo
-        echo
-
-        yay -S --noconfirm \
-            nvidia-580xx-dkms nvidia-580xx-settings \
-            nvidia-580xx-utils opencl-nvidia-580xx \
-            lib32-nvidia-580xx-utils opencl-nvidia-580xx
-        ;;
-    *)
-        echo "No option!"
-        ;;
-esac
-
 echo
 echo
 echo "##################################################"

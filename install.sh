@@ -8,7 +8,7 @@ read -p "Enter your hostname: " HOST_NAME
 read -p "Enter your username: " USER_NAME
 read -p "Enter your GPU (n/nvidia or i/intel or a/amd or o/others): " GPU
 read -p "Set timeout for GRUB: " TIMEOUT_GRUB
-read -p "Your DE (kde or cinnamon or other): " DE
+read -p "Your DE (kde or cinnamon or o/other): " DE
 
 echo
 echo
@@ -181,7 +181,7 @@ esac
 echo
 echo
 echo "##################################################"
-echo "###                INSTALL $DE                 ###"
+echo "###                INSTALL DE                  ###"
 echo "##################################################"
 echo
 echo
@@ -192,12 +192,8 @@ case $DE in
             plasma-desktop \
             sddm sddm-kcm \
             dolphin dolphin-plugins spectacle ark gwenview okular \
-            konsole kalk kate kalarm kcharselect kdenetwork-filesharing kvantum 7zip
-
-        systemctl enable sddm
-
-        mkdir -p /usr/share/sddm
-        7z x sddm.7z -o/usr/share/sddm/ -aoa -bb1
+            konsole kalk kate kalarm kcharselect kdenetwork-filesharing kvantum \
+			7zip
 
         echo
         echo
@@ -238,24 +234,30 @@ EOF
     cinnamon)
         pacman -S --noconfirm --needed \
             xorg-server \
-            cinnamon \
-            lightdm lightdm-gtk-greeter lightdm-gtk-greeter-settings lightdm-slick-greeter \
+            cinnamon sddm \
             xed xviewer pix \
             gnome-terminal gnome-screenshot gnome-system-monitor gnome-calculator gnome-calendar \
             nemo-fileroller nemo-terminal nemo-share \
-            gufw \
+            ufw ufw-extras gufw \
             xdg-user-dirs xdg-user-dirs-gtk \
             blueman
-
-        systemctl enable lightdm
         ;;
     *)
         echo "Nothing in setup DE."
         ;;
 esac
 
+systemctl enable sddm
+
+mkdir -p /usr/share/sddm
+7z x sddm.7z -o/usr/share/sddm/ -aoa -bb1
+
+systemctl enable NetworkManager
+systemctl enable systemd-timesyncd
+systemctl enable fstrim.timer
+		
 echo
-echo "### Install $DE and Apps completed!"
+echo "### Install DE completed!"
 
 echo
 echo
@@ -265,21 +267,12 @@ echo "##################################################"
 echo
 echo
 
-systemctl enable NetworkManager
-systemctl enable systemd-timesyncd
-systemctl enable fstrim.timer
-
-echo "# FONTS #"
 pacman -S --noconfirm --needed \
     ttf-roboto ttf-dejavu ttf-liberation \
     ttf-carlito ttf-material-icons ttf-material-symbols-variable ttf-cascadia-code \
     ttf-jetbrains-mono ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols \
     noto-fonts noto-fonts-cjk noto-fonts-emoji \
-    otf-font-awesome woff2-font-awesome
-
-echo
-echo "# SYSTEM APPS #"
-pacman -S --noconfirm --needed \
+    otf-font-awesome woff2-font-awesome \
 	flatpak network-manager-applet \
 	vulkan-icd-loader lib32-vulkan-icd-loader \
 	pacman-contrib system-config-printer jq \
@@ -288,14 +281,7 @@ pacman -S --noconfirm --needed \
 	powerdevil power-profiles-daemon \
 	ufw ufw-extras \
 	fastfetch fish wget curl 7zip \
-	fcitx5-im fcitx5-configtool fcitx5-unikey
-
-systemctl enable bluetooth
-systemctl enable ufw
-	
-echo
-echo "# APPS #"
-pacman -S --noconfirm --needed \
+	fcitx5-im fcitx5-configtool fcitx5-unikey \
 	docker docker-compose docker-buildx \
 	git-lfs less rclone \
 	firefox vlc \
@@ -304,6 +290,8 @@ pacman -S --noconfirm --needed \
 	dbeaver postgresql code \
 	tela-circle-icon-theme-purple
 
+systemctl enable bluetooth
+systemctl enable ufw
 systemctl enable docker
 usermod -aG docker $USER_NAME
 

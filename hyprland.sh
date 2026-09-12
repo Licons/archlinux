@@ -7,6 +7,7 @@ set -Eeuo pipefail
 # - Scrolling layout
 # - Quickshell KDE-like bar + SNI tray + popup wallpaper
 # - Catppuccin Pastel / Tokyo Night
+# - Full Sweet stack: GTK + Kvantum + Sweet-Rainbow + Sweet-cursors
 # - Rofi theme sync WITHOUT CSS gradients/background-image
 # - awww wallpaper animations
 # ================================================================
@@ -36,6 +37,15 @@ BACKUP="$HOME/.config-backup-hypr-anime-$STAMP"
 # ----------------------------------------------------------------
 ENABLE_NVIDIA_ENV="n"
 ENABLE_FCITX5="n"
+CURSOR_THEME="Sweet-cursors"
+CURSOR_SIZE="24"
+
+read -r -p "Cursor theme [Sweet-cursors]: " CURSOR_INPUT
+CURSOR_THEME="${CURSOR_INPUT:-Sweet-cursors}"
+
+read -r -p "Cursor size [24]: " CURSOR_SIZE_INPUT
+CURSOR_SIZE="${CURSOR_SIZE_INPUT:-24}"
+[[ "$CURSOR_SIZE" =~ ^[0-9]+$ ]] || CURSOR_SIZE="24"
 
 read -r -p "Thêm biến môi trường NVIDIA cho Hyprland? [y/N]: " ENABLE_NVIDIA_ENV
 case "$ENABLE_NVIDIA_ENV" in
@@ -62,7 +72,7 @@ done
 # Packages
 # ----------------------------------------------------------------
 log "Updating Arch Linux..."
-sudo pacman -Syu --noconfirm --needed
+sudo pacman -Syu --noconfirm
 
 PACKAGES=(
   hyprland
@@ -110,9 +120,11 @@ PACKAGES=(
   grim
   slurp
   swappy
+  flameshot
 
   kitty
-  thunar
+  dolphin
+  konsole
   firefox
 
   gvfs
@@ -129,11 +141,17 @@ PACKAGES=(
   noto-fonts-emoji
   ttf-jetbrains-mono-nerd
   papirus-icon-theme
+  breeze-icons
   adw-gtk-theme
   nwg-look
   qt6ct
+  qt5ct
+  kvantum
+  kvantum-qt5
 
   jq
+  git
+  curl
   imagemagick
   libnotify
   wev
@@ -180,11 +198,190 @@ mkdir -p \
   "$ROFI" \
   "$SWAYNC" \
   "$KITTY" \
+  "$CFG/gtk-3.0" \
+  "$CFG/gtk-4.0" \
+  "$CFG/qt5ct" \
+  "$CFG/qt6ct" \
+  "$CFG/Kvantum" \
+  "$HOME/.local/share/icons" \
   "$BIN" \
   "$WALL" \
   "$CACHE"
 
 xdg-user-dirs-update || true
+
+# ================================================================
+# Sweet GTK / Kvantum theme
+# ================================================================
+log "Installing Sweet GTK/Kvantum theme from upstream..."
+
+mkdir -p "$HOME/.themes" "$CFG/Kvantum"
+
+SWEET_TMP="$(mktemp -d)"
+trap 'rm -rf "$SWEET_TMP"' EXIT
+
+SWEET_GTK_NAME="Sweet"
+SWEET_GTK_DIR="$HOME/.themes/Sweet"
+
+# Prefer the latest official release asset for GTK.
+# Fall back to a shallow source clone if GitHub API / release download fails.
+sweet_asset_url="$(
+  curl -fsSL --retry 3 \
+    https://api.github.com/repos/EliverLara/Sweet/releases/latest 2>/dev/null |
+  jq -r '
+    [.assets[]
+     | select(.name == "Sweet-Dark.tar.xz")
+     | .browser_download_url][0] // empty
+  ' 2>/dev/null || true
+)"
+
+if [[ -n "$sweet_asset_url" ]] &&
+   curl -fL --retry 3 "$sweet_asset_url" -o "$SWEET_TMP/Sweet-Dark.tar.xz"; then
+  mkdir -p "$SWEET_TMP/gtk-release"
+  tar -xf "$SWEET_TMP/Sweet-Dark.tar.xz" -C "$SWEET_TMP/gtk-release"
+
+  sweet_found="$(
+    find "$SWEET_TMP/gtk-release" -mindepth 1 -maxdepth 2 -type d \
+      \( -name 'Sweet-Dark' -o -name 'Sweet*' \) |
+    head -1
+  )"
+
+  if [[ -n "$sweet_found" ]]; then
+    SWEET_GTK_NAME="$(basename "$sweet_found")"
+    rm -rf "$HOME/.themes/$SWEET_GTK_NAME"
+    cp -a "$sweet_found" "$HOME/.themes/$SWEET_GTK_NAME"
+    SWEET_GTK_DIR="$HOME/.themes/$SWEET_GTK_NAME"
+ICON_THEME="$(cat "$CFG/hypr/.sweet-icon-theme" 2>/dev/null || echo Sweet-Rainbow)"
+  fi
+fi
+
+# Source tree is also used to locate the official Sweet Kvantum files.
+if git clone --depth 1 https://github.com/EliverLara/Sweet.git \
+     "$SWEET_TMP/Sweet-src" >/dev/null 2>&1; then
+
+  if [[ ! -d "$SWEET_GTK_DIR" ]] &&
+     [[ -d "$SWEET_TMP/Sweet-src/gtk-3.0" ]]; then
+    rm -rf "$HOME/.themes/Sweet"
+    cp -a "$SWEET_TMP/Sweet-src" "$HOME/.themes/Sweet"
+    SWEET_GTK_NAME="Sweet"
+    SWEET_GTK_DIR="$HOME/.themes/Sweet"
+  fi
+
+  sweet_kvconfig="$(
+    find "$SWEET_TMP/Sweet-src" -type f -name 'Sweet.kvconfig' |
+    head -1
+  )"
+
+  if [[ -n "$sweet_kvconfig" ]]; then
+    sweet_kv_dir="$(dirname "$sweet_kvconfig")"
+    sweet_svg="$sweet_kv_dir/Sweet.svg"
+
+    if [[ -f "$sweet_svg" ]]; then
+      rm -rf "$CFG/Kvantum/Sweet"
+      mkdir -p "$CFG/Kvantum/Sweet"
+      cp -a "$sweet_kvconfig" "$CFG/Kvantum/Sweet/Sweet.kvconfig"
+      cp -a "$sweet_svg" "$CFG/Kvantum/Sweet/Sweet.svg"
+
+      # Copy optional companion assets from the same theme directory.
+      find "$sweet_kv_dir" -maxdepth 1 -type f \
+        ! -name 'Sweet.kvconfig' \
+        ! -name 'Sweet.svg' \
+        -exec cp -a {} "$CFG/Kvantum/Sweet/" \; 2>/dev/null || true
+    else
+      warn "Sweet.kvconfig found, but Sweet.svg was not found beside it."
+    fi
+  else
+    warn "Could not locate Sweet Kvantum files in upstream source."
+  fi
+else
+  warn "Could not clone Sweet source; GTK release theme may still be available."
+fi
+
+[[ -d "$SWEET_GTK_DIR" ]] ||
+  warn "Sweet GTK theme was not installed successfully; GTK will fall back safely."
+
+printf '%s\n' "$SWEET_GTK_NAME" > "$HYPR/.sweet-gtk-theme"
+
+# ----------------------------------------------------------------
+# Sweet icon + cursor stack
+# ----------------------------------------------------------------
+log "Installing Sweet-Rainbow icons + candy-icons + Sweet-cursors..."
+
+ICONS_ROOT="$HOME/.local/share/icons"
+SWEET_ICON_THEME="Sweet-Rainbow"
+SWEET_CURSOR_THEME="Sweet-cursors"
+mkdir -p "$ICONS_ROOT"
+
+# Sweet-Rainbow contains the colorful folder layer and inherits candy-icons.
+if git clone --depth 1 https://github.com/EliverLara/Sweet-folders.git \
+     "$SWEET_TMP/Sweet-folders" >/dev/null 2>&1; then
+  if [[ -d "$SWEET_TMP/Sweet-folders/Sweet-Rainbow" ]]; then
+    rm -rf "$ICONS_ROOT/Sweet-Rainbow"
+    cp -a "$SWEET_TMP/Sweet-folders/Sweet-Rainbow" \
+      "$ICONS_ROOT/Sweet-Rainbow"
+  else
+    warn "Sweet-folders cloned, but Sweet-Rainbow was not found."
+  fi
+else
+  warn "Could not clone Sweet-folders."
+fi
+
+# Sweet-Rainbow intentionally inherits candy-icons for application/file icons.
+if git clone --depth 1 https://github.com/EliverLara/candy-icons.git \
+     "$SWEET_TMP/candy-icons" >/dev/null 2>&1; then
+  if [[ -f "$SWEET_TMP/candy-icons/index.theme" ]]; then
+    rm -rf "$ICONS_ROOT/candy-icons"
+    cp -a "$SWEET_TMP/candy-icons" "$ICONS_ROOT/candy-icons"
+  else
+    warn "candy-icons cloned, but index.theme was not found."
+  fi
+else
+  warn "Could not clone candy-icons."
+fi
+
+# Official Sweet XCursor theme lives in the Sweet KDE tree.
+# Prefer the upstream 'nova' branch because it contains the current cursor assets.
+if git clone --depth 1 --branch nova https://github.com/EliverLara/Sweet.git \
+     "$SWEET_TMP/Sweet-nova" >/dev/null 2>&1; then
+  sweet_cursor_dir="$(
+    find "$SWEET_TMP/Sweet-nova" -type d -name 'Sweet-cursors' -print -quit
+  )"
+else
+  sweet_cursor_dir=""
+fi
+
+# Fall back to the already-cloned Sweet source if needed.
+if [[ -z "${sweet_cursor_dir:-}" && -d "$SWEET_TMP/Sweet-src" ]]; then
+  sweet_cursor_dir="$(
+    find "$SWEET_TMP/Sweet-src" -type d -name 'Sweet-cursors' -print -quit
+  )"
+fi
+
+if [[ -n "${sweet_cursor_dir:-}" && -f "$sweet_cursor_dir/index.theme" ]]; then
+  rm -rf "$ICONS_ROOT/Sweet-cursors"
+  cp -a "$sweet_cursor_dir" "$ICONS_ROOT/Sweet-cursors"
+else
+  warn "Sweet-cursors could not be located in upstream Sweet."
+fi
+
+# Refresh GTK icon caches when the helper exists. Failures are harmless because
+# Qt/KDE/GTK can still load icon themes without a prebuilt user cache.
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  [[ -f "$ICONS_ROOT/candy-icons/index.theme" ]] &&
+    gtk-update-icon-cache -f -t "$ICONS_ROOT/candy-icons" >/dev/null 2>&1 || true
+  [[ -f "$ICONS_ROOT/Sweet-Rainbow/index.theme" ]] &&
+    gtk-update-icon-cache -f -t "$ICONS_ROOT/Sweet-Rainbow" >/dev/null 2>&1 || true
+fi
+
+[[ -d "$ICONS_ROOT/Sweet-Rainbow" ]] ||
+  warn "Sweet-Rainbow is unavailable; applications may fall back to Papirus/Breeze."
+[[ -d "$ICONS_ROOT/candy-icons" ]] ||
+  warn "candy-icons is unavailable; some Sweet-Rainbow application icons may fall back."
+[[ -d "$ICONS_ROOT/Sweet-cursors/cursors" ]] ||
+  warn "Sweet-cursors is unavailable; cursor fallback may be used."
+
+printf '%s\n' "$SWEET_ICON_THEME" > "$HYPR/.sweet-icon-theme"
+printf '%s\n' "$SWEET_CURSOR_THEME" > "$HYPR/.sweet-cursor-theme"
 
 # ================================================================
 # Bundled wallpapers
@@ -632,18 +829,18 @@ cat > "$CFG/rofi/power.rasi" <<RASI
 }
 
 window {
-  width: 430px;
+  width: 780px;
   location: center;
   anchor: center;
   border: 2px;
   border-color: @borderc;
-  border-radius: 20px;
+  border-radius: 22px;
   background-color: @bg;
   padding: 18px;
 }
 
 mainbox {
-  spacing: 12px;
+  spacing: 0px;
   background-color: @bg;
 }
 
@@ -652,16 +849,21 @@ inputbar {
 }
 
 listview {
-  lines: 5;
-  columns: 1;
-  spacing: 8px;
+  lines: 1;
+  columns: 5;
+  fixed-columns: true;
+  fixed-height: true;
+  spacing: 10px;
   scrollbar: false;
+  cycle: true;
+  dynamic: false;
   background-color: transparent;
 }
 
 element {
-  padding: 13px 18px;
-  border-radius: 13px;
+  orientation: vertical;
+  padding: 16px 12px;
+  border-radius: 14px;
   background-color: @bg2;
 }
 
@@ -675,7 +877,7 @@ element-text {
   horizontal-align: 0.5;
   vertical-align: 0.5;
   text-color: inherit;
-  font: "JetBrainsMono Nerd Font Bold 13";
+  font: "JetBrainsMono Nerd Font Bold 12";
 }
 RASI
 
@@ -770,6 +972,121 @@ color7 #bac2de
 KITTY
     ;;
 esac
+
+# Toolkit theme sync: GTK + Qt5/Qt6 + Kvantum + cursor.
+CURSOR_THEME="$(grep -m1 'HYPRCURSOR_THEME' "$CFG/hypr/config/env.lua" 2>/dev/null | sed -n 's/.*"\([^"]*\)").*/\1/p')"
+CURSOR_SIZE="$(grep -m1 'HYPRCURSOR_SIZE' "$CFG/hypr/config/env.lua" 2>/dev/null | sed -n 's/.*"\([0-9][0-9]*\)").*/\1/p')"
+CURSOR_THEME="${CURSOR_THEME:-Sweet-cursors}"
+CURSOR_SIZE="${CURSOR_SIZE:-24}"
+
+case "$THEME" in
+  tokyo-night)
+    GTK_ACCENT="#7aa2f7"
+    GTK_ACCENT2="#bb9af7"
+    GTK_BG="#1a1b26"
+    GTK_FG="#c0caf5"
+    KV_THEME="Sweet"
+    ;;
+  *)
+    GTK_ACCENT="#cba6f7"
+    GTK_ACCENT2="#f5c2e7"
+    GTK_BG="#1e1e2e"
+    GTK_FG="#cdd6f4"
+    KV_THEME="Sweet"
+    ;;
+esac
+
+SWEET_GTK_NAME="$(cat "$CFG/hypr/.sweet-gtk-theme" 2>/dev/null || echo Sweet)"
+SWEET_GTK_DIR="$HOME/.themes/$SWEET_GTK_NAME"
+
+for version in 3.0 4.0; do
+  mkdir -p "$CFG/gtk-$version"
+  cat > "$CFG/gtk-$version/settings.ini" <<GTK
+[Settings]
+gtk-theme-name=$SWEET_GTK_NAME
+gtk-icon-theme-name=$ICON_THEME
+gtk-font-name=Noto Sans 10
+gtk-cursor-theme-name=$CURSOR_THEME
+gtk-cursor-theme-size=$CURSOR_SIZE
+gtk-application-prefer-dark-theme=1
+GTK
+
+done
+
+# GTK4/libadwaita does not consistently honor gtk-theme-name.
+# If the Sweet theme ships GTK4 assets, expose them in ~/.config/gtk-4.0.
+if [[ -d "$SWEET_GTK_DIR/gtk-4.0" ]]; then
+  rm -f "$CFG/gtk-4.0/gtk.css" "$CFG/gtk-4.0/gtk-dark.css"
+  rm -rf "$CFG/gtk-4.0/assets"
+
+  [[ -f "$SWEET_GTK_DIR/gtk-4.0/gtk.css" ]] &&
+    ln -sfn "$SWEET_GTK_DIR/gtk-4.0/gtk.css" "$CFG/gtk-4.0/gtk.css"
+
+  [[ -f "$SWEET_GTK_DIR/gtk-4.0/gtk-dark.css" ]] &&
+    ln -sfn "$SWEET_GTK_DIR/gtk-4.0/gtk-dark.css" "$CFG/gtk-4.0/gtk-dark.css"
+
+  [[ -d "$SWEET_GTK_DIR/gtk-4.0/assets" ]] &&
+    ln -sfn "$SWEET_GTK_DIR/gtk-4.0/assets" "$CFG/gtk-4.0/assets"
+fi
+
+if command -v gsettings >/dev/null 2>&1; then
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme "$SWEET_GTK_NAME" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface cursor-theme "$CURSOR_THEME" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface cursor-size "$CURSOR_SIZE" 2>/dev/null || true
+fi
+
+mkdir -p "$CFG/Kvantum" "$CFG/qt5ct/colors" "$CFG/qt6ct/colors"
+
+cat > "$CFG/Kvantum/kvantum.kvconfig" <<KV
+[General]
+theme=$KV_THEME
+KV
+
+FG="${GTK_FG#\#}"
+BG="${GTK_BG#\#}"
+ACC="${GTK_ACCENT#\#}"
+ACC2="${GTK_ACCENT2#\#}"
+
+for qt in qt5ct qt6ct; do
+  cat > "$CFG/$qt/colors/hypr-anime.conf" <<QTCOLOR
+[ColorScheme]
+active_colors=#ff$FG, #ff$BG, #ff$BG, #ff$BG, #ff$BG, #ff$FG, #ff$FG, #ff$FG, #ff$FG, #ff$BG, #ff$BG, #ff$FG, #ff$ACC, #ff$BG, #ff$ACC2, #ff$FG, #ff$BG, #ff$FG, #ff$BG, #ff$FG, #ff$FG
+disabled_colors=#ff7f849c, #ff$BG, #ff$BG, #ff$BG, #ff$BG, #ff7f849c, #ff7f849c, #ff7f849c, #ff7f849c, #ff$BG, #ff$BG, #ff7f849c, #ff$ACC, #ff$BG, #ff$ACC2, #ff7f849c, #ff$BG, #ff7f849c, #ff$BG, #ff7f849c, #ff7f849c
+inactive_colors=#ff$FG, #ff$BG, #ff$BG, #ff$BG, #ff$BG, #ff$FG, #ff$FG, #ff$FG, #ff$FG, #ff$BG, #ff$BG, #ff$FG, #ff$ACC, #ff$BG, #ff$ACC2, #ff$FG, #ff$BG, #ff$FG, #ff$BG, #ff$FG, #ff$FG
+QTCOLOR
+
+  cat > "$CFG/$qt/${qt}.conf" <<QTCONF
+[Appearance]
+color_scheme_path=$CFG/$qt/colors/hypr-anime.conf
+custom_palette=true
+icon_theme=$ICON_THEME
+standard_dialogs=default
+style=kvantum
+
+[Fonts]
+fixed="JetBrainsMono Nerd Font,10,-1,5,50,0,0,0,0,0"
+general="Noto Sans,10,-1,5,50,0,0,0,0,0"
+QTCONF
+done
+
+# KDE Frameworks applications such as Dolphin consult kdeglobals as well.
+if command -v kwriteconfig6 >/dev/null 2>&1; then
+  kwriteconfig6 --file kdeglobals --group Icons --key Theme "$ICON_THEME" || true
+elif command -v kwriteconfig5 >/dev/null 2>&1; then
+  kwriteconfig5 --file kdeglobals --group Icons --key Theme "$ICON_THEME" || true
+fi
+
+command -v kbuildsycoca6 >/dev/null 2>&1 && kbuildsycoca6 >/dev/null 2>&1 || true
+
+# Sweet-cursors is an XCursor theme. Hyprland >= 0.37 only accepts real
+# hyprcursor themes in `hyprctl setcursor`, so do not call it for Sweet-cursors.
+# XCURSOR_THEME/XCURSOR_SIZE + GTK gsettings are the correct path here.
+if command -v hyprctl >/dev/null 2>&1 && [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+  # XCursor environment changes apply reliably on the next Hyprland session.
+  hyprctl reload >/dev/null 2>&1 || true
+fi
 EOF
 chmod +x "$BIN/ui-theme-sync"
 
@@ -823,7 +1140,7 @@ swaync-client -rs >/dev/null 2>&1 || true
 # theme.js is imported at shell load time, restart Quickshell for palette change.
 pkill quickshell 2>/dev/null || true
 sleep 0.15
-quickshell -c "$HOME/.config/quickshell" >/tmp/quickshell-hypr.log 2>&1 &
+quickshell -p "$HOME/.config/quickshell/shell.qml" >/tmp/quickshell-hypr.log 2>&1 &
 
 notify-send -a "Hypr Anime" "Theme changed" "$choice"
 EOF
@@ -857,7 +1174,11 @@ case "$choice" in
   *Sleep) systemctl suspend ;;
   *Reboot) systemctl reboot ;;
   *Shutdown) systemctl poweroff ;;
-  *Logout) command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch exit ;;
+  *Logout)
+    # Hyprland >= 0.55 uses Lua dispatchers. `hyprctl dispatch` expects
+    # a Lua dispatcher expression, not the old hyprlang dispatcher name.
+    exec hyprctl dispatch 'hl.dsp.exit()'
+    ;;
 esac
 EOF
 
@@ -932,9 +1253,9 @@ SUPER + B              Browser
 SUPER + SPACE          Application launcher
 SUPER + 1..5           Workspace
 SUPER + SHIFT + 1..5   Move window to workspace
-PRINT                  Region screenshot
-SUPER + PRINT          Fullscreen screenshot
-SUPER + SHIFT + PRINT  Active window screenshot
+PRINT                  Flameshot region / annotate
+SUPER + PRINT          Flameshot fullscreen
+SUPER + SHIFT + PRINT  Flameshot active window
 KEYS
 EOF
 
@@ -947,26 +1268,57 @@ dir="$HOME/Pictures/Screenshots"
 mkdir -p "$dir"
 file="$dir/$(date +'%Y-%m-%d_%H-%M-%S').png"
 
+# Force native Wayland rendering for Flameshot under Hyprland.
+flame=(env QT_QPA_PLATFORM=wayland flameshot)
+
 case "$mode" in
   region)
-    geometry="$(slurp)" || exit 0
-    grim -g "$geometry" "$file"
+    # Interactive selection + annotation. Save and copy only when accepted.
+    "${flame[@]}" gui \
+      --clipboard \
+      --path "$file"
     ;;
+
   full)
-    grim "$file"
+    # All monitors, no grim capture path.
+    "${flame[@]}" full \
+      --clipboard \
+      --path "$file"
     ;;
+
   window)
-    geometry="$(hyprctl activewindow -j | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"')"
-    [[ -n "$geometry" && "$geometry" != "null" ]] || exit 0
-    grim -g "$geometry" "$file"
+    # Capture the active Hyprland window exactly using Flameshot's region option.
+    geometry="$(
+      hyprctl activewindow -j |
+        jq -r '
+          if (.at and .size and (.at|length) >= 2 and (.size|length) >= 2)
+          then "\(.size[0])x\(.size[1])+\(.at[0])+\(.at[1])"
+          else empty
+          end
+        '
+    )"
+
+    [[ -n "$geometry" ]] || exit 0
+
+    "${flame[@]}" full \
+      --region "$geometry" \
+      --clipboard \
+      --path "$file"
     ;;
+
   *)
+    printf 'Usage: %s {region|full|window}
+' "$0" >&2
     exit 2
     ;;
 esac
 
-wl-copy < "$file"
-notify-send -a Screenshot "Saved and copied" "$file"
+# GUI cancellation produces no screenshot; don't show a false success notification.
+if [[ -s "$file" ]]; then
+  notify-send -a Screenshot \
+    "Screenshot saved" \
+    "$file"
+fi
 EOF
 
 cat > "$BIN/qs-control" <<'EOF'
@@ -1113,6 +1465,147 @@ case "$cmd" in
     wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
     ;;
 
+  system-stats)
+    # Output:
+    # ram_used|ram_total|swap_used_or_none|swap_total_or_none|disk_used|disk_total|cpu_pct|cpu_cores|cpu_threads|gpu_pct_or_none|gpu_vram_total_gb_or_none
+    read -r mem_total mem_avail swap_total swap_free < <(
+      awk '
+        /MemTotal:/     { mt=$2 }
+        /MemAvailable:/ { ma=$2 }
+        /SwapTotal:/    { st=$2 }
+        /SwapFree:/     { sf=$2 }
+        END { print mt, ma, st, sf }
+      ' /proc/meminfo
+    )
+
+    ram_used_gb="$(awk -v t="$mem_total" -v a="$mem_avail" 'BEGIN { printf "%.1f", (t-a)/1048576 }')"
+    ram_total_gb="$(awk -v t="$mem_total" 'BEGIN { printf "%.0f", t/1048576 }')"
+
+    if [[ "${swap_total:-0}" -gt 0 ]]; then
+      swap_used_gb="$(awk -v t="$swap_total" -v f="$swap_free" 'BEGIN { printf "%.1f", (t-f)/1048576 }')"
+      swap_total_gb="$(awk -v t="$swap_total" 'BEGIN { printf "%.0f", t/1048576 }')"
+    else
+      swap_used_gb="none"
+      swap_total_gb="none"
+    fi
+
+    read -r disk_used disk_total < <(df -B1 --output=used,size / 2>/dev/null | awk 'NR==2 {print $1, $2}')
+    disk_used_gb="$(awk -v b="${disk_used:-0}" 'BEGIN { printf "%.0f", b/1073741824 }')"
+    disk_total_gb="$(awk -v b="${disk_total:-0}" 'BEGIN { printf "%.0f", b/1073741824 }')"
+
+    # Physical core count (e.g. 6C/12T -> CPU (6)); fall back to online logical CPUs.
+    cpu_cores="$(
+      lscpu -p=CORE,SOCKET 2>/dev/null \
+        | awk -F, '!/^#/ { key=$1 ":" $2; seen[key]=1 } END { print length(seen) }'
+    )"
+    if [[ -z "${cpu_cores:-}" || "$cpu_cores" -lt 1 ]]; then
+      cpu_cores="$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+    fi
+    cpu_threads="$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo "$cpu_cores")"
+
+    read_cpu() {
+      awk '/^cpu / {
+        idle=$5+$6; total=0;
+        for (i=2; i<=NF; i++) total += $i;
+        print total, idle; exit
+      }' /proc/stat
+    }
+
+    read -r cpu_total_1 cpu_idle_1 < <(read_cpu)
+    sleep 0.15
+    read -r cpu_total_2 cpu_idle_2 < <(read_cpu)
+    cpu_pct="$(awk -v t1="$cpu_total_1" -v i1="$cpu_idle_1" -v t2="$cpu_total_2" -v i2="$cpu_idle_2" '
+      BEGIN {
+        dt=t2-t1; di=i2-i1;
+        if (dt <= 0) print 0;
+        else { v=(100*(dt-di)/dt); if (v<0) v=0; if (v>100) v=100; printf "%.0f", v }
+      }
+    ')"
+
+    gpu_pct="none"
+    gpu_vram_total_gb="none"
+    if command -v nvidia-smi >/dev/null 2>&1; then
+      value="$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -dc '0-9' || true)"
+      [[ -n "$value" ]] && gpu_pct="$value"
+      vram_mib="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -dc '0-9.' || true)"
+      if [[ -n "$vram_mib" ]]; then
+        gpu_vram_total_gb="$(awk -v m="$vram_mib" 'BEGIN { v=m/1024; if (v == int(v)) printf "%.0f", v; else printf "%.1f", v }')"
+      fi
+    fi
+
+    if [[ "$gpu_pct" == "none" ]]; then
+      for busy in /sys/class/drm/card*/device/gpu_busy_percent; do
+        [[ -r "$busy" ]] || continue
+        value="$(tr -dc '0-9' < "$busy" 2>/dev/null || true)"
+        if [[ -n "$value" ]]; then
+          gpu_pct="$value"
+          vram_file="${busy%/gpu_busy_percent}/mem_info_vram_total"
+          if [[ -r "$vram_file" ]]; then
+            vram_bytes="$(tr -dc '0-9' < "$vram_file" 2>/dev/null || true)"
+            if [[ -n "$vram_bytes" && "$vram_bytes" -gt 0 ]]; then
+              gpu_vram_total_gb="$(awk -v b="$vram_bytes" 'BEGIN { v=b/1073741824; if (v == int(v)) printf "%.0f", v; else printf "%.1f", v }')"
+            fi
+          fi
+          break
+        fi
+      done
+    fi
+
+    printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' \
+      "$ram_used_gb" "$ram_total_gb" "$swap_used_gb" "$swap_total_gb" \
+      "$disk_used_gb" "$disk_total_gb" "$cpu_pct" "$cpu_cores" "$cpu_threads" "$gpu_pct" "$gpu_vram_total_gb"
+    ;;
+
+  cpu-detail)
+    # Safe text-only CPU popup backend. Avoids dynamic QML models/delegates.
+    physical="$(( $(lscpu -p=CORE,SOCKET 2>/dev/null | awk -F, '!/^#/ { k=$1 ":" $2; seen[k]=1 } END { print length(seen) }') + 0 ))"
+    logical="$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+    (( physical > 0 )) || physical="$logical"
+
+    tmp1="$(mktemp)"
+    tmp2="$(mktemp)"
+    trap 'rm -f "$tmp1" "$tmp2"' EXIT
+    awk '/^cpu[0-9]+ / { idle=$5+$6; total=0; for(i=2;i<=NF;i++) total+=$i; print $1,total,idle }' /proc/stat > "$tmp1"
+    sleep 0.15
+    awk '/^cpu[0-9]+ / { idle=$5+$6; total=0; for(i=2;i<=NF;i++) total+=$i; print $1,total,idle }' /proc/stat > "$tmp2"
+
+    printf '%s cores / %s threads\n\n' "$physical" "$logical"
+    awk '
+      NR==FNR { t[$1]=$2; i[$1]=$3; next }
+      {
+        dt=$2-t[$1]; di=$3-i[$1]; p=(dt>0 ? 100*(dt-di)/dt : 0);
+        if (p<0) p=0; if (p>100) p=100;
+        n=int((p+5)/10); bar="";
+        for (j=0;j<10;j++) bar=bar (j<n ? "━" : "─");
+        idx=$1; sub(/^cpu/, "", idx);
+        printf "CPU %-2s  %3.0f%%  %s\n", idx, p, bar;
+      }
+    ' "$tmp1" "$tmp2"
+    ;;
+
+  disk-list)
+    # mount|used_gib|total_gib|percent
+    # Show real/local filesystems and hide pseudo filesystems.
+    df -B1 -P \
+      -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs \
+      2>/dev/null | awk '
+        NR > 1 {
+          mount=$6
+          # Ignore runtime/system pseudo mount trees even if backed by a block-like source.
+          if (mount ~ /^\/(proc|sys|dev|run)(\/|$)/) next
+          used=$3/1073741824
+          total=$2/1073741824
+          pct=$5; gsub(/%/, "", pct)
+          printf "%s|%.1f|%.1f|%d\n", mount, used, total, pct
+        }
+      ' | sort -t'|' -k1,1
+    ;;
+
+  open-path)
+    path="${2:-$HOME}"
+    dolphin "$path" >/dev/null 2>&1 &
+    ;;
+
   notifications)
     swaync-client -t -sw
     ;;
@@ -1159,7 +1652,7 @@ pgrep -f "wl-paste.*image.*cliphist store" >/dev/null || \
 "$HOME/.local/bin/ui-theme-sync" >/dev/null 2>&1 || true
 
 pkill quickshell 2>/dev/null || true
-quickshell -c "$HOME/.config/quickshell" >/tmp/quickshell-hypr.log 2>&1 &
+quickshell -p "$HOME/.config/quickshell/shell.qml" >/tmp/quickshell-hypr.log 2>&1 &
 
 sleep 0.4
 
@@ -1225,6 +1718,7 @@ require("config.theme")
 require("config.input")
 require("config.scrolling")
 require("config.animations")
+require("config.rules")
 require("config.autostart")
 require("config.keybinds")
 EOF
@@ -1237,8 +1731,16 @@ hl.env("GDK_BACKEND", "wayland,x11,*")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
-hl.env("XCURSOR_SIZE", "24")
+-- Sweet-cursors is an XCursor theme. With no HYPRCURSOR_THEME set,
+-- Hyprland falls back to XCursor as documented by the Hyprland wiki.
+hl.env("XCURSOR_THEME", "__CURSOR_THEME__")
+hl.env("XCURSOR_SIZE", "__CURSOR_SIZE__")
 EOF
+
+sed -i \
+  -e "s|__CURSOR_THEME__|$CURSOR_THEME|g" \
+  -e "s|__CURSOR_SIZE__|$CURSOR_SIZE|g" \
+  "$HYPR/config/env.lua"
 
 cat > "$HYPR/config/monitors.lua" <<'EOF'
 -- Default: every connected monitor at preferred mode.
@@ -1283,6 +1785,33 @@ hl.config({
 EOF
 
 # Placeholder; ui-theme-sync overwrites it immediately below.
+cat > "$HYPR/config/rules.lua" <<'EOF'
+-- Dolphin as a centered popup-style file manager.
+-- The main window gets a roomy size; modal child dialogs stay smaller.
+hl.window_rule({
+  name = "dolphin-popup-main",
+  match = {
+    class = "^(org[.]kde[.]dolphin)$",
+    modal = false,
+  },
+  float = true,
+  center = true,
+  size = { "monitor_w*0.78", "monitor_h*0.80" },
+  persistent_size = true,
+})
+
+hl.window_rule({
+  name = "dolphin-popup-modal",
+  match = {
+    class = "^(org[.]kde[.]dolphin)$",
+    modal = true,
+  },
+  float = true,
+  center = true,
+  size = { "monitor_w*0.50", "monitor_h*0.38" },
+})
+EOF
+
 cat > "$HYPR/config/theme.lua" <<'EOF'
 hl.config({
   general = {
@@ -1411,10 +1940,10 @@ hl.bind("SUPER + Q",
   hl.dsp.window.close({}))
 
 hl.bind("SUPER + M",
-  hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch exit"))
+  hl.dsp.exit())
 
 hl.bind("SUPER + E",
-  hl.dsp.exec_cmd("thunar"))
+  hl.dsp.exec_cmd("dolphin"))
 
 hl.bind("SUPER + D",
   hl.dsp.exec_cmd("nwg-displays"))
@@ -1638,6 +2167,8 @@ var border = "#806C7086"
 EOF
 
 cat > "$QS/shell.qml" <<'EOF'
+//@ pragma UseQApplication
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -1663,6 +2194,20 @@ ShellRoot {
     property bool microphoneAvailable: false
     property int microphoneVolume: 0
     property bool microphoneMuted: false
+
+    property string ramUsedGb: "0.0"
+    property string ramTotalGb: "0"
+    property string swapUsedGb: "none"
+    property string swapTotalGb: "none"
+    property string diskUsedGb: "0"
+    property string diskTotalGb: "0"
+    property int cpuUsage: 0
+    property int cpuCores: 1
+    property int cpuThreads: 1
+    property string cpuDetailText: "Loading CPU details..."
+    property int gpuUsage: -1
+    property string gpuVramTotalGb: "none"
+    property var diskMounts: []
 
     property int calendarMonthOffset: 0
     property bool systemClusterExpanded: false
@@ -1917,6 +2462,92 @@ ShellRoot {
         }
     }
 
+    Process {
+        id: systemStatsProc
+        command: [
+            Quickshell.env("HOME") + "/.local/bin/qs-control",
+            "system-stats"
+        ]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var parts = text.trim().split("|")
+                if (parts.length < 11)
+                    return
+
+                root.ramUsedGb = parts[0] || "0.0"
+                root.ramTotalGb = parts[1] || "0"
+                root.swapUsedGb = parts[2] || "none"
+                root.swapTotalGb = parts[3] || "none"
+                root.diskUsedGb = parts[4] || "0"
+                root.diskTotalGb = parts[5] || "0"
+                root.cpuUsage = Math.max(0, Math.min(100, Number(parts[6] || 0)))
+                root.cpuCores = Math.max(1, Number(parts[7] || 1))
+                root.cpuThreads = Math.max(1, Number(parts[8] || root.cpuCores))
+                root.gpuUsage = parts[9] === "none"
+                    ? -1
+                    : Math.max(0, Math.min(100, Number(parts[9] || 0)))
+                root.gpuVramTotalGb = parts[10] || "none"
+            }
+        }
+    }
+
+    Process {
+        id: cpuDetailProc
+        command: [
+            Quickshell.env("HOME") + "/.local/bin/qs-control",
+            "cpu-detail"
+        ]
+
+        stdout: StdioCollector {
+            onStreamFinished: root.cpuDetailText = text.trim()
+        }
+    }
+
+    Process {
+        id: diskListProc
+        command: [
+            Quickshell.env("HOME") + "/.local/bin/qs-control",
+            "disk-list"
+        ]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var rows = []
+                var lines = text.trim().split("\n")
+
+                for (var i = 0; i < lines.length; ++i) {
+                    if (!lines[i])
+                        continue
+
+                    var p = lines[i].split("|")
+                    if (p.length < 4)
+                        continue
+
+                    rows.push({
+                        mount: p[0],
+                        used: p[1],
+                        total: p[2],
+                        percent: Math.max(0, Math.min(100, Number(p[3] || 0)))
+                    })
+                }
+
+                root.diskMounts = rows
+            }
+        }
+    }
+
+    Timer {
+        interval: 2000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: {
+            if (!systemStatsProc.running)
+                systemStatsProc.running = true
+        }
+    }
+
     Timer {
         interval: 3500
         repeat: true
@@ -1949,7 +2580,9 @@ ShellRoot {
     PanelWindow {
         id: bar
 
-        implicitHeight: 44
+        implicitHeight: 56
+        exclusiveZone: 56
+        aboveWindows: true
         color: "transparent"
 
         anchors {
@@ -1959,24 +2592,37 @@ ShellRoot {
         }
 
         margins {
-            top: 7
-            left: 10
-            right: 10
+            top: 0
+            bottom: 0
+            left: 0
+            right: 0
         }
 
         Rectangle {
-            anchors.fill: parent
+            id: barSurface
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: parent.top
+                bottom: parent.bottom
+                leftMargin: 10
+                rightMargin: 10
+                topMargin: 7
+                bottomMargin: 5
+            }
             radius: 16
-            color: Theme.bg
+            color: "#1E1E2E"
             border.width: 1
             border.color: Theme.border
+            antialiasing: true
 
             // Left: launcher + workspaces only.
             Row {
+                height: 30
                 anchors.left: parent.left
-                anchors.leftMargin: 9
+                anchors.leftMargin: 11
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 6
+                spacing: 7
 
                 BarButton {
                     label: "󰣇"
@@ -1985,6 +2631,7 @@ ShellRoot {
                 }
 
                 Row {
+                    height: 30
                     spacing: 3
 
                     Repeater {
@@ -2024,6 +2671,246 @@ ShellRoot {
                                     Hyprland.dispatch(
                                         "workspace " + (parent.index + 1)
                                     )
+                            }
+                        }
+                    }
+                }
+
+                // Compact system telemetry directly to the right of workspaces.
+                Item {
+                    width: 9
+                    height: 30
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 1
+                        height: 20
+                        color: Theme.border
+                    }
+                }
+
+                Row {
+                    id: systemTelemetry
+                    height: 30
+                    spacing: 7
+
+                    // Every telemetry item uses the same 28px container so icons,
+                    // labels and bars share one visual baseline with the workspaces.
+                    Rectangle {
+                        id: diskTelemetry
+                        implicitWidth: diskTelemetryRow.implicitWidth + 12
+                        width: implicitWidth
+                        height: 30
+                        radius: 9
+                        color: diskTelemetryMouse.containsMouse ? Theme.surface2 : "transparent"
+
+                        Row {
+                            id: diskTelemetryRow
+                            anchors.centerIn: parent
+                            height: 30
+                            spacing: 6
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "󰋊"
+                                color: Theme.accent
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 14
+                            }
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.diskUsedGb + "GB/" + root.diskTotalGb + "GB"
+                                color: Theme.text
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 11
+                                font.bold: true
+                            }
+                        }
+
+                        MouseArea {
+                            id: diskTelemetryMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (!diskListProc.running)
+                                    diskListProc.running = true
+                                diskPopup.visible = !diskPopup.visible
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        implicitWidth: ramTelemetryRow.implicitWidth + 4
+                        width: implicitWidth
+                        height: 30
+                        color: "transparent"
+
+                        Row {
+                            id: ramTelemetryRow
+                            anchors.centerIn: parent
+                            height: 30
+                            spacing: 6
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "󰍛"
+                                color: Theme.accent
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 14
+                            }
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.ramUsedGb + "GB/" + root.ramTotalGb + "GB"
+                                color: Theme.text
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 11
+                                font.bold: true
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        visible: root.swapUsedGb !== "none"
+                        implicitWidth: swapTelemetryRow.implicitWidth + 4
+                        width: visible ? implicitWidth : 0
+                        height: 30
+                        color: "transparent"
+
+                        Row {
+                            id: swapTelemetryRow
+                            anchors.centerIn: parent
+                            height: 30
+                            spacing: 6
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "󰾴"
+                                color: Theme.accent2
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 14
+                            }
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.swapUsedGb + "GB/" + root.swapTotalGb + "GB"
+                                color: Theme.text
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 11
+                                font.bold: true
+                            }
+                        }
+                    }
+
+                    Item {
+                        width: 9
+                        height: 30
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 1
+                            height: 20
+                            color: Theme.border
+                        }
+                    }
+
+                    Rectangle {
+                        id: cpuTelemetry
+                        implicitWidth: cpuTelemetryRow.implicitWidth + 8
+                        width: implicitWidth
+                        height: 30
+                        radius: 8
+                        color: cpuTelemetryMouse.containsMouse ? Theme.surface2 : "transparent"
+
+                        Row {
+                            id: cpuTelemetryRow
+                            anchors.centerIn: parent
+                            height: 30
+                            spacing: 6
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "CPU (" + root.cpuCores + ")"
+                                color: Theme.subtext
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 10
+                                font.bold: true
+                            }
+
+                            Rectangle {
+                                width: 48
+                                height: 6
+                                radius: 3
+                                color: Theme.surface2
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Rectangle {
+                                    width: parent.width * root.cpuUsage / 100
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color: Theme.accent
+
+                                    Behavior on width {
+                                        NumberAnimation { duration: 180 }
+                                    }
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id: cpuTelemetryMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (!cpuDetailProc.running)
+                                    cpuDetailProc.running = true
+                                cpuPopup.visible = !cpuPopup.visible
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        visible: root.gpuUsage >= 0
+                        implicitWidth: gpuTelemetryRow.implicitWidth
+                        width: visible ? implicitWidth : 0
+                        height: 30
+                        color: "transparent"
+
+                        Row {
+                            id: gpuTelemetryRow
+                            anchors.centerIn: parent
+                            height: 30
+                            spacing: 6
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.gpuVramTotalGb === "none" ? "GPU" : "GPU (" + root.gpuVramTotalGb + "GB)"
+                                color: Theme.subtext
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 10
+                                font.bold: true
+                            }
+
+                            Rectangle {
+                                width: 48
+                                height: 6
+                                radius: 3
+                                color: Theme.surface2
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Rectangle {
+                                    width: parent.width * root.gpuUsage / 100
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color: Theme.accent2
+
+                                    Behavior on width {
+                                        NumberAnimation { duration: 180 }
+                                    }
+                                }
                             }
                         }
                     }
@@ -2084,7 +2971,7 @@ ShellRoot {
                 id: rightCluster
 
                 anchors.right: parent.right
-                anchors.rightMargin: 9
+                anchors.rightMargin: 11
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 5
 
@@ -2149,6 +3036,18 @@ ShellRoot {
                                 asynchronous: true
                             }
 
+                            QsMenuAnchor {
+                                id: trayMenuAnchor
+                                menu: trayItem.modelData.menu
+
+                                anchor {
+                                    item: trayItem
+                                    edges: Edges.Bottom | Edges.Right
+                                    gravity: Edges.Bottom | Edges.Left
+                                    margins.top: 6
+                                }
+                            }
+
                             MouseArea {
                                 anchors.fill: parent
 
@@ -2165,11 +3064,7 @@ ShellRoot {
                                         mouse.button === Qt.RightButton &&
                                         trayItem.modelData.hasMenu
                                     ) {
-                                        trayItem.modelData.display(
-                                            bar,
-                                            trayItem.x,
-                                            36
-                                        )
+                                        trayMenuAnchor.open()
                                     } else if (
                                         mouse.button === Qt.MiddleButton
                                     ) {
@@ -2429,35 +3324,370 @@ ShellRoot {
     }
 
     // ============================================================
-    // CENTERED CALENDAR POPUP
+    // DISK POPUP - click the disk telemetry on the bar
     // ============================================================
-    PanelWindow {
-        id: calendarPopup
+    PopupWindow {
+        id: diskPopup
 
         visible: false
         implicitWidth: 430
-        implicitHeight: 505
+        implicitHeight: 360
         color: "transparent"
-        focusable: true
+        grabFocus: true
 
-        anchors {
-            top: true
-            left: true
+        anchor.window: bar
+        anchor.rect.x: Math.max(8, Math.min(bar.width - width - 8, diskTelemetry.mapToItem(barSurface, 0, 0).x))
+        anchor.rect.y: bar.height + 6
+
+        PopupCard {
+            id: diskCard
+            anchors.fill: parent
+            anchors.margins: 2
+
+            transform: Translate {
+                id: diskSlide
+                y: 0
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 10
+
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "󰋊  Disk Usage"
+                        color: Theme.text
+                        font.pixelSize: 18
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: "󰑐"
+                        color: diskRefreshMouse.containsMouse ? Theme.accent : Theme.muted
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 16
+
+                        MouseArea {
+                            id: diskRefreshMouse
+                            anchors.fill: parent
+                            anchors.margins: -8
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: if (!diskListProc.running) diskListProc.running = true
+                        }
+                    }
+
+                    Text {
+                        text: "󰅖"
+                        color: Theme.muted
+                        font.pixelSize: 17
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -8
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: diskPopup.visible = false
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: Theme.border
+                }
+
+                ListView {
+                    id: diskList
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    spacing: 6
+                    model: root.diskMounts
+
+                    delegate: Rectangle {
+                        required property var modelData
+
+                        width: diskList.width
+                        height: 58
+                        radius: 12
+                        color: diskRowMouse.containsMouse ? Theme.surface2 : Theme.surface
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 12
+                            spacing: 10
+
+                            Text {
+                                text: modelData.mount === "/" ? "󰋊" : "󰋌"
+                                color: Theme.accent
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 17
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 3
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: modelData.mount
+                                        color: Theme.text
+                                        elide: Text.ElideMiddle
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                    }
+
+                                    Text {
+                                        text: modelData.used + "GB/" + modelData.total + "GB  " + modelData.percent + "%"
+                                        color: Theme.subtext
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pixelSize: 10
+                                    }
+                                }
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 6
+                                    radius: 3
+                                    color: Theme.surface2
+
+                                    Rectangle {
+                                        width: parent.width * modelData.percent / 100
+                                        height: parent.height
+                                        radius: parent.radius
+                                        color: Theme.accent
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: "󰁔"
+                                color: Theme.muted
+                                font.pixelSize: 14
+                            }
+                        }
+
+                        MouseArea {
+                            id: diskRowMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.execControl("open-path", modelData.mount)
+                                diskPopup.visible = false
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    visible: root.diskMounts.length === 0
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "No local filesystems found"
+                    horizontalAlignment: Text.AlignHCenter
+                    color: Theme.muted
+                    font.pixelSize: 11
+                }
+            }
         }
 
-        // Position directly under the centered date/clock.
-        margins {
-            top: 6
-            left: Math.max(
-                0,
-                (screen.width - implicitWidth) / 2
-            )
+        onVisibleChanged: {
+            if (visible) {
+                if (!diskListProc.running)
+                    diskListProc.running = true
+                diskSlide.y = -20
+                diskCard.opacity = 0
+                diskOpenAnim.restart()
+            }
         }
+
+        ParallelAnimation {
+            id: diskOpenAnim
+
+            NumberAnimation {
+                target: diskSlide
+                property: "y"
+                from: -20
+                to: 0
+                duration: 190
+                easing.type: Easing.OutCubic
+            }
+
+            NumberAnimation {
+                target: diskCard
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: 150
+                easing.type: Easing.OutCubic
+            }
+        }
+    }
+
+    // ============================================================
+    // CPU POPUP - safe text-only per-thread view
+    // ============================================================
+    PopupWindow {
+        id: cpuPopup
+
+        visible: false
+        implicitWidth: 390
+        implicitHeight: Math.min(520, 120 + root.cpuThreads * 22)
+        color: "transparent"
+        grabFocus: true
+
+        anchor.window: bar
+        anchor.rect.x: Math.max(8, Math.min(bar.width - width - 8, cpuTelemetry.mapToItem(barSurface, 0, 0).x - width / 2 + cpuTelemetry.width / 2))
+        anchor.rect.y: bar.height + 6
+
+        PopupCard {
+            id: cpuCard
+            anchors.fill: parent
+            anchors.margins: 2
+
+            transform: Translate {
+                id: cpuSlide
+                y: 0
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 10
+
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "󰘚  CPU • " + root.cpuCores + " cores / " + root.cpuThreads + " threads"
+                        color: Theme.text
+                        font.pixelSize: 16
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: root.cpuUsage + "%"
+                        color: Theme.accent
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 12
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: "󰅖"
+                        color: Theme.muted
+                        font.pixelSize: 17
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -8
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: cpuPopup.visible = false
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: Theme.border
+                }
+
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+
+                    Text {
+                        width: parent.width
+                        text: root.cpuDetailText
+                        color: Theme.text
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 11
+                        lineHeight: 1.35
+                    }
+                }
+            }
+        }
+
+        onVisibleChanged: {
+            if (visible) {
+                if (!cpuDetailProc.running)
+                    cpuDetailProc.running = true
+                cpuSlide.y = -20
+                cpuCard.opacity = 0
+                cpuOpenAnim.restart()
+            }
+        }
+
+        ParallelAnimation {
+            id: cpuOpenAnim
+
+            NumberAnimation {
+                target: cpuSlide
+                property: "y"
+                from: -20
+                to: 0
+                duration: 190
+                easing.type: Easing.OutCubic
+            }
+
+            NumberAnimation {
+                target: cpuCard
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: 150
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        Timer {
+            interval: 1500
+            repeat: true
+            running: cpuPopup.visible
+            onTriggered: if (!cpuDetailProc.running) cpuDetailProc.running = true
+        }
+    }
+
+    // ============================================================
+    // CENTERED CALENDAR POPUP
+    // PopupWindow dismisses itself when clicking outside.
+    // ============================================================
+    PopupWindow {
+        id: calendarPopup
+
+        visible: false
+        implicitWidth: 434
+        implicitHeight: 509
+        color: "transparent"
+        grabFocus: true
+
+        anchor.window: bar
+        anchor.rect.x: Math.max(0, (bar.width - width) / 2)
+        anchor.rect.y: bar.height + 6
 
         PopupCard {
             id: calendarCard
 
             anchors.fill: parent
+            anchors.margins: 2
+
+            transform: Translate {
+                id: calendarSlide
+                y: 0
+            }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -2609,11 +3839,12 @@ ShellRoot {
                         root.calendarMonthOffset = 0
                 }
             }
+
         }
 
         onVisibleChanged: {
             if (visible) {
-                calendarCard.scale = 0.94
+                calendarSlide.y = -18
                 calendarCard.opacity = 0
                 calendarAnim.restart()
             }
@@ -2623,11 +3854,11 @@ ShellRoot {
             id: calendarAnim
 
             NumberAnimation {
-                target: calendarCard
-                property: "scale"
-                from: 0.94
-                to: 1
-                duration: 170
+                target: calendarSlide
+                property: "y"
+                from: -18
+                to: 0
+                duration: 185
                 easing.type: Easing.OutCubic
             }
 
@@ -2637,6 +3868,7 @@ ShellRoot {
                 from: 0
                 to: 1
                 duration: 145
+                easing.type: Easing.OutCubic
             }
         }
     }
@@ -2644,29 +3876,29 @@ ShellRoot {
     // ============================================================
     // RIGHT-SIDE SYSTEM POPUP
     // ============================================================
-    PanelWindow {
+    PopupWindow {
         id: systemPopup
 
         visible: false
-        implicitWidth: 410
-        implicitHeight: 470
+        implicitWidth: 414
+        implicitHeight: 474
         color: "transparent"
-        focusable: true
+        grabFocus: true
 
-        anchors {
-            top: true
-            right: true
-        }
-
-        margins {
-            top: 6
-            right: 12
-        }
+        anchor.window: bar
+        anchor.rect.x: Math.max(0, bar.width - width - 12)
+        anchor.rect.y: bar.height + 6
 
         PopupCard {
             id: systemCard
 
             anchors.fill: parent
+            anchors.margins: 2
+
+            transform: Translate {
+                id: systemSlide
+                y: 0
+            }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -2957,11 +4189,12 @@ ShellRoot {
                     }
                 }
             }
+
         }
 
         onVisibleChanged: {
             if (visible) {
-                systemCard.scale = 0.94
+                systemSlide.y = -18
                 systemCard.opacity = 0
                 systemAnim.restart()
             }
@@ -2971,11 +4204,11 @@ ShellRoot {
             id: systemAnim
 
             NumberAnimation {
-                target: systemCard
-                property: "scale"
-                from: 0.94
-                to: 1
-                duration: 170
+                target: systemSlide
+                property: "y"
+                from: -18
+                to: 0
+                duration: 185
                 easing.type: Easing.OutCubic
             }
 
@@ -2985,6 +4218,7 @@ ShellRoot {
                 from: 0
                 to: 1
                 duration: 145
+                easing.type: Easing.OutCubic
             }
         }
     }
@@ -3000,26 +4234,39 @@ ShellRoot {
     // COMPONENTS
     // ============================================================
     component PopupCard: Rectangle {
-        radius: 20
-        clip: true
-        color: "transparent"
+        // Keep the outer corners opaque and genuinely rounded. QQuickItem clipping
+        // is rectangular, so a full-size wallpaper image can otherwise leak into
+        // the four corner pixels of a rounded popup.
+        radius: 22
+        color: Theme.bg
         border.width: 1
         border.color: Theme.border
 
-        Image {
-            anchors.fill: parent
-            source: root.wallpaperUrl
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            cache: false
-            opacity: 0.50
-        }
-
         Rectangle {
             anchors.fill: parent
-            radius: 20
+            anchors.margins: 2
+            radius: 19
             color: Theme.bg
-            opacity: 0.76
+            clip: true
+
+            Image {
+                // Inset the wallpaper from the outer border; even rectangular
+                // clipping can no longer touch the popup's four outer corners.
+                anchors.fill: parent
+                anchors.margins: 2
+                source: root.wallpaperUrl
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: false
+                opacity: 0.34
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: Theme.bg
+                opacity: 0.82
+            }
         }
     }
 
@@ -3279,7 +4526,9 @@ confirm_os_window_close 0
 enable_audio_bell no
 EOF
 
-# Initial synchronized theme.
+# ================================================================
+# Initial theme/toolkit synchronization
+# ================================================================
 "$BIN/ui-theme-sync"
 
 # ================================================================
@@ -3351,11 +4600,21 @@ Optional environment:
   NVIDIA env: $ENABLE_NVIDIA_ENV
   Fcitx5 env: $ENABLE_FCITX5
 
+Desktop theming:
+  GTK: Sweet (upstream)
+  Icons: Sweet-Rainbow + candy-icons fallback
+  Cursor: Sweet-cursors / XCursor ($CURSOR_SIZE px)
+  Qt5/Qt6: qt5ct/qt6ct -> Kvantum
+  KDE/Dolphin icons: Sweet-Rainbow via kdeglobals
+  Kvantum: Sweet
+  SUPER + T keeps Sweet app styling while syncing shell palette/icons/cursor
+
 Quickshell:
   - one synchronized clock/date string at true bar center
   - calendar popup centered directly below clock/date
   - month calendar popup (7 x 6)
-  - no active-window title beside workspaces
+  - disk/RAM/swap/CPU/GPU telemetry beside workspaces
+  - clickable multi-mount disk popup; click a mount to open it in Dolphin
   - simple right-side layout: tray | system ‹ power
   - application tray collapsed into one hover-reveal tray button
   - broken tray icons auto-hide instead of showing checkerboard
@@ -3367,6 +4626,9 @@ Quickshell:
   - Wi-Fi/Ethernet icon selected from actual network hardware/state
   - Bluetooth icon only when a controller exists
   - microphone controls only when a real input source exists
+  - rounded PopupWindow cards with 2px transparent inset
+  - slide-down + fade animation
+  - click outside dismisses calendar/system popups
   - wallpaper popup background loaded from:
     $CACHE/hypr-popup-wallpaper
   - popup gap is 6px below the top work area
