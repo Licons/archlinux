@@ -170,8 +170,8 @@ case $GPU in
         pacman -S --noconfirm --needed xf86-video-amdgpu mesa
         ;;
     v|virtualbox)
-		pacman -S --noconfirm --needed virtualbox-guest-utils
-		systemctl enable vboxservice.service
+        pacman -S --noconfirm --needed virtualbox-guest-utils
+        systemctl enable vboxservice.service
         ;;
     *)
         echo "You must be install later."
@@ -193,6 +193,7 @@ case $DE in
             sddm sddm-kcm \
             dolphin dolphin-plugins spectacle ark gwenview okular \
             konsole kalk kate kalarm kcharselect kdenetwork-filesharing kvantum
+        systemctl enable sddm
 
         sudo pacman -S --noconfirm --needed samba smbclient
         systemctl enable smb nmb
@@ -220,20 +221,19 @@ tee /etc/systemd/system/accounts-daemon.service.d/override.conf >/dev/null <<'EO
 [Service]
 ProtectSystem=false
 EOF
-
-		systemctl enable sddm
         ;;
 
     c|cinnamon)
         pacman -S --noconfirm --needed \
             xorg-server xorg-xwayland \
             cinnamon \
-			lightdm lightdm-gtk-greeter lightdm-gtk-greeter-setting lightdm-webkit2-greeter \
+            lightdm lightdm-gtk-greeter lightdm-webkit2-greeter \
             gnome-terminal gnome-screenshot gnome-system-monitor gnome-calculator gnome-calendar gnome-characters \
             nemo-fileroller nemo-terminal nemo-share \
             ufw ufw-extras gufw blueman \
             xdg-user-dirs xdg-user-dirs-gtk \
-            kitty kate konsole
+            kate konsole discover kvantum
+        systemctl enable lightdm
         ;;
 
     *)
@@ -259,22 +259,22 @@ pacman -S --noconfirm --needed \
     ttf-jetbrains-mono ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols \
     noto-fonts noto-fonts-cjk noto-fonts-emoji \
     otf-font-awesome woff2-font-awesome \
-	flatpak network-manager-applet \
-	vulkan-icd-loader lib32-vulkan-icd-loader \
-	pacman-contrib system-config-printer jq \
-	pipewire pipewire-audio pipewire-pulse pipewire-alsa wireplumber \
-	bluez bluez-utils bluedevil \
-	powerdevil power-profiles-daemon \
-	ufw ufw-extras \
-	fastfetch fish wget curl 7zip \
-	fcitx5-im fcitx5-configtool fcitx5-unikey \
-	docker docker-compose docker-buildx \
-	git-lfs less rclone \
-	firefox vlc \
-	libreoffice-fresh \
-	nodejs npm jdk-openjdk \
-	dbeaver postgresql code \
-	tela-circle-icon-theme-purple
+    flatpak network-manager-applet \
+    vulkan-icd-loader lib32-vulkan-icd-loader \
+    pacman-contrib system-config-printer jq \
+    pipewire pipewire-audio pipewire-pulse pipewire-alsa wireplumber \
+    bluez bluez-utils bluedevil \
+    powerdevil power-profiles-daemon \
+    ufw ufw-extras \
+    fastfetch fish wget curl 7zip \
+    fcitx5-im fcitx5-configtool fcitx5-unikey \
+    docker docker-compose docker-buildx \
+    git-lfs less rclone \
+    firefox vlc \
+    libreoffice-fresh \
+    nodejs npm jdk-openjdk \
+    dbeaver postgresql code \
+    tela-circle-icon-theme-purple
 
 systemctl enable bluetooth
 systemctl enable ufw

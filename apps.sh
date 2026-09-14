@@ -1,8 +1,5 @@
 #!/bin/bash
-
 set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo
 echo
@@ -64,7 +61,7 @@ ANOTHER_REDIS="Another-Redis-Desktop-Manager-linux-$ANOTHER_VERSION-x86_64.AppIm
 sudo pacman -S --noconfirm --needed fuse2
 mkdir -p ~/AppImages
 wget -P ~/AppImages https://github.com/qishibo/AnotherRedisDesktopManager/releases/download/v$ANOTHER_VERSION/$ANOTHER_REDIS
-cp $SCRIPT_DIR/../pictures/another_redis.png ~/AppImages/another_redis.png
+cp pictures/another_redis.png ~/AppImages/another_redis.png
 
 sudo chmod +x ~/AppImages/$ANOTHER_REDIS
 mkdir -p ~/.local/share/applications
@@ -86,12 +83,13 @@ echo
 echo
 
 cd ~/Downloads
+mkdir -p ~/.local/share/applications
+
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 ar x google-chrome-stable_current_amd64.deb
 tar -xf data.tar.xz
 
 sudo cp -r opt/google /opt/
-sudo mkdir -p ~/.local/share/applications
 sudo cp -r usr/share/applications/google-chrome.desktop ~/.local/share/applications/
 sudo ln -s /opt/google/chrome/google-chrome /usr/bin/google-chrome-stable
 
@@ -104,7 +102,7 @@ echo
 echo
 
 flatpak remote-add --if-not-exists flathub https://flathub.org
-flatpak install flathub com.github.IsmaelMartinez.teams_for_linux
+flatpak install flathub com.github.IsmaelMartinez.teams_for_linux -y
 
 echo
 echo
