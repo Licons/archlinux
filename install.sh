@@ -227,7 +227,7 @@ EOF
         pacman -S --noconfirm --needed \
             xorg-server xorg-xwayland \
             cinnamon udisks2 gvfs gvfs-mtp libmtp \
-            lightdm lightdm-gtk-greeter lightdm-webkit2-greeter \
+            lightdm lightdm-gtk-greeter lightdm-slick-greeter lightdm-webkit2-greeter \
             gnome-terminal gnome-screenshot gnome-system-monitor gnome-calculator gnome-calendar gnome-characters \
             nemo-fileroller nemo-terminal nemo-share \
             ufw ufw-extras gufw blueman \

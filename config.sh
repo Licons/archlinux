@@ -7,9 +7,11 @@ KVANTUM_PATH=$HOME/.config/Kvantum
 ICONS_PATH=$HOME/.icons
 THEMES_PATH=$HOME/.themes
 
-read -p "Your Nvidia GPU is 10xx (y/n): " GPU
 read -p "GIT username: " GIT_USER
 read -p "GIT email: " GIT_EMAIL
+read -p "Your Nvidia GPU is 10xx (y/n): " GPU
+read -p "Using lightdm (y/n): " LIGHTDM
+read -p "Using Webkit (y/n): " WEBKIT
 
 chsh -s /usr/bin/fish $USER
 
@@ -175,20 +177,26 @@ tar -xvf files/McMojave-circle-black.tar.xz -C $ICONS_PATH
 mkdir -p $THEMES_PATH
 tar -xvf files/Layan-Dark.tar.xz -C $THEMES_PATH
 
-read -p "Using lightdm (y/n): " LIGHTDM
-
 case $LIGHTDM in
     y)
-		git clone https://aur.archlinux.org/lightdm-webkit2-theme-glorious.git /tmp/lightdm-webkit2-theme-glorious
-		cd /tmp/lightdm-webkit2-theme-glorious
-		makepkg -sri
+        case $WEBKIT in
+            y)
+                git clone https://aur.archlinux.org/lightdm-webkit2-theme-glorious.git /tmp/lightdm-webkit2-theme-glorious
+                cd /tmp/lightdm-webkit2-theme-glorious
+                makepkg -sri
 
-		cd $SCRIPT_DIR
-		sudo tar -xvf files/lightdm-webkit2-theme-glorious-2.0.5.tar.gz -C /usr/share/lightdm-webkit/themes/glorious
-		# Set default lightdm greeter to lightdm-webkit2-greeter
-		sudo sed -i 's/^#greeter-session.*/greeter-session=lightdm-webkit2-greeter/' /etc/lightdm/lightdm.conf
-		# Set default lightdm-webkit2-greeter theme to Glorious
-		sudo sed -i 's/^webkit_theme\s*=\s*\(.*\)/webkit_theme = glorious #\1/g' /etc/lightdm/lightdm-webkit2-greeter.conf
+                cd $SCRIPT_DIR
+                sudo tar -xvf files/lightdm-webkit2-theme-glorious-2.0.5.tar.gz -C /usr/share/lightdm-webkit/themes/glorious
+                # Set default lightdm greeter to lightdm-webkit2-greeter
+                sudo sed -i 's/^#greeter-session.*/greeter-session=lightdm-webkit2-greeter/' /etc/lightdm/lightdm.conf
+                # Set default lightdm-webkit2-greeter theme to Glorious
+                sudo sed -i 's/^webkit_theme\s*=\s*\(.*\)/webkit_theme = glorious #\1/g' /etc/lightdm/lightdm-webkit2-greeter.conf
+                ;;
+            n)
+                cd $SCRIPT_DIR
+                sudo sed -i 's/^#greeter-session.*/greeter-session=lightdm-slick-greeter/' /etc/lightdm/lightdm.conf
+                ;;
+        esac
         ;;
 esac
 
