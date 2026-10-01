@@ -2,20 +2,6 @@
 
 set -euo pipefail
 
-USERNAME=$USER
-
-[[ $EUID -eq 0 ]] || {
-    echo "Run as root."
-    exit 1
-}
-
-id "$USERNAME" &>/dev/null || {
-    echo "User $USERNAME not found."
-    exit 1
-}
-
-USER_HOME="$(getent passwd "$USERNAME" | cut -d: -f6)"
-
 pacman -Syu --noconfirm
 
 # ------------------------------------------------------------
@@ -177,12 +163,12 @@ pacman -S --needed --noconfirm \
 # USER DIRECTORIES
 # ------------------------------------------------------------
 
-runuser -u "$USERNAME" -- xdg-user-dirs-update
+runuser -u "$USER" -- xdg-user-dirs-update
 
-mkdir -p "$USER_HOME/Pictures/Screenshots"
+mkdir -p "$HOME/Pictures/Screenshots"
 
-chown -R "$USERNAME:$USERNAME" \
-    "$USER_HOME/Pictures"
+chown -R "$USER:$USER" \
+    "$HOME/Pictures"
 
 
 # ------------------------------------------------------------
@@ -190,12 +176,12 @@ chown -R "$USERNAME:$USERNAME" \
 # ------------------------------------------------------------
 
 install -d \
-    -o "$USERNAME" \
-    -g "$USERNAME" \
-    "$USER_HOME/.config/niri"
+    -o "$USER" \
+    -g "$USER" \
+    "$HOME/.config/niri"
 
 
-cat >"$USER_HOME/.config/niri/config.kdl" <<'EOF'
+cat >"$HOME/.config/niri/config.kdl" <<'EOF'
 
 input {
     keyboard {
@@ -439,15 +425,15 @@ EOF
 
 
 chown -R \
-    "$USERNAME:$USERNAME" \
-    "$USER_HOME/.config/niri"
+    "$USER:$USER" \
+    "$HOME/.config/niri"
 
 
 # ------------------------------------------------------------
 # ENABLE DMS SCRIPT
 # ------------------------------------------------------------
 
-cat >"$USER_HOME/enable-dms.sh" <<'EOF'
+cat >"$HOME/enable-dms.sh" <<'EOF'
 #!/usr/bin/env bash
 
 set -e
@@ -460,11 +446,11 @@ echo "Logout/login lại để áp dụng."
 EOF
 
 
-chmod +x "$USER_HOME/enable-dms.sh"
+chmod +x "$HOME/enable-dms.sh"
 
 chown \
-    "$USERNAME:$USERNAME" \
-    "$USER_HOME/enable-dms.sh"
+    "$USER:$USER" \
+    "$HOME/enable-dms.sh"
 
 
 # ------------------------------------------------------------
@@ -481,9 +467,9 @@ systemctl enable power-profiles-daemon.service
 # VALIDATE
 # ------------------------------------------------------------
 
-runuser -u "$USERNAME" -- \
+runuser -u "$USER" -- \
     niri validate \
-    --config "$USER_HOME/.config/niri/config.kdl"
+    --config "$HOME/.config/niri/config.kdl"
 
 
 echo
