@@ -430,30 +430,6 @@ chown -R \
 
 
 # ------------------------------------------------------------
-# ENABLE DMS SCRIPT
-# ------------------------------------------------------------
-
-cat >"$HOME/enable-dms.sh" <<'EOF'
-#!/usr/bin/env bash
-
-set -e
-
-systemctl --user add-wants niri.service dms
-
-echo
-echo "DMS enabled."
-echo "Logout/login lại để áp dụng."
-EOF
-
-
-chmod +x "$HOME/enable-dms.sh"
-
-chown \
-    "$USER:$USER" \
-    "$HOME/enable-dms.sh"
-
-
-# ------------------------------------------------------------
 # SERVICES
 # ------------------------------------------------------------
 
