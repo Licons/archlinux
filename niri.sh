@@ -65,6 +65,7 @@ pacman -S --needed --noconfirm \
     pipewire \
     pipewire-alsa \
     pipewire-pulse \
+    pipewire-audio \
     wireplumber \
     pavucontrol
 
