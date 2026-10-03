@@ -616,9 +616,9 @@ fi
 # LIGHTDM: disable other display managers
 # ------------------------------------------------------------
 
-systemctl disable greetd.service 2>/dev/null || true
-systemctl disable sddm.service 2>/dev/null || true
-systemctl disable gdm.service 2>/dev/null || true
+# systemctl disable greetd.service 2>/dev/null || true
+# systemctl disable sddm.service 2>/dev/null || true
+# systemctl disable gdm.service 2>/dev/null || true
 
 systemctl enable lightdm.service
 
