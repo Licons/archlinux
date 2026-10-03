@@ -92,7 +92,7 @@ pacman -S --needed --noconfirm \
 # ------------------------------------------------------------
 
 pacman -S --needed --noconfirm \
-    dms \
+    dms-shell \
     matugen \
     cava \
     qt6-multimedia-ffmpeg
