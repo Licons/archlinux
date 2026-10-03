@@ -6,7 +6,7 @@ set -euo pipefail
 # Run as root
 # ============================================================
 
-USERNAME=$USER
+read -p "username: " USERNAME
 
 if [[ $EUID -ne 0 ]]; then
     echo "ERROR: Run as root."
@@ -19,7 +19,7 @@ if ! id "$USERNAME" &>/dev/null; then
     exit 1
 fi
 
-USER_HOME=$HOME
+USER_HOME="$(getent passwd "$USERNAME" | cut -d: -f6)"
 
 echo "============================================"
 echo " Installing Niri desktop for: $USERNAME"
