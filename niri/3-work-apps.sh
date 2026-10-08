@@ -26,6 +26,13 @@ echo "==> [WORK] Installing desktop/work applications"
   python-openpyxl python-docx \
   zram-generator
 
+# window-rule {
+#     match app-id=r#"^firefox$"#
+#     match app-id=r#"^google-chrome$"#
+#     exclude title="^Picture[- ]in[- ][Pp]icture$"
+#     open-maximized-to-edges true
+# }
+
 echo "==> [WORK] Docker"
 sudo systemctl enable docker.service
 sudo usermod -aG docker "$USER"
