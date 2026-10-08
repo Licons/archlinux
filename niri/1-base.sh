@@ -60,6 +60,15 @@ function fish_prompt
 end
 EOF
 
+cat > "$HOME/.config/fish/functions/ls.fish" <<'EOF'
+function ls
+    xhost +SI:localuser:root
+    sudo chmod 755 $HOME
+    lightdm-gtk-greeter-settings-pkexec
+    xhost -SI:localuser:root
+end
+EOF
+
 echo "==> [BASE] Fcitx5"
 # Niri starts xdg-desktop-autostart.target, and the Arch fcitx5 package
 # already ships /etc/xdg/autostart/org.fcitx.Fcitx5.desktop.
