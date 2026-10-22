@@ -18,7 +18,7 @@ echo "==> [WORK] Installing desktop/work applications"
   dbeaver postgresql \
   docker docker-compose docker-buildx \
   fuse2 tmux \
-  python-openpyxl python-docx \
+  python-openpyxl python-opencv python-docx \
   zram-generator
 
 echo "==> [WORK] Docker"
