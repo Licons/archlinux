@@ -1,0 +1,21 @@
+{
+  "dockerManager": {
+    "enabled": true
+  },
+  "aiOverviewControl": {
+    "enabled": true,
+    "providerSelection": "claude",
+    "pillProviders": "claude"
+  },
+  "networkIndicator": {
+    "enabled": true
+  },
+  "quickCapture": {
+    "enabled": true,
+    "color_palette_preset": "custom",
+    "toolbar_color_0": "#C62828"
+  },
+  "dockerDashboard": {
+    "enabled": true
+  }
+}
